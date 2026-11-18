@@ -7,11 +7,9 @@ import {
   Ticket,
   Users,
   Send,
-  Shield,
   Settings,
   LogOut,
   ExternalLink,
-  Trophy,
   Menu,
   X,
   Search,
@@ -22,14 +20,12 @@ import { AdminUser } from '../../types/index.js';
 import { api } from '../../api/client.js';
 import { AdminOverviewView } from './AdminOverviewView.js';
 import { CampaignsView } from './CampaignsView.js';
-import { DrawsView } from './DrawsView.js';
 import { RefundsView } from './RefundsView.js';
 import { InventoryView } from './InventoryView.js';
 import { PaymentReviewsView } from './PaymentReviewsView.js';
 import { ReservationsView } from './ReservationsView.js';
 import { CustomersView } from './CustomersView.js';
 import { OutboxView } from './OutboxView.js';
-import { AuditLogsView } from './AuditLogsView.js';
 import { SettingsView } from './SettingsView.js';
 
 interface AdminDashboardProps {
@@ -41,14 +37,12 @@ interface AdminDashboardProps {
 export type AdminTab =
   | 'overview'
   | 'campaigns'
-  | 'draws'
   | 'refunds'
   | 'inventory'
   | 'reviews'
   | 'reservations'
   | 'customers'
   | 'outbox'
-  | 'audit'
   | 'settings';
 
 interface NavItem {
@@ -61,13 +55,11 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   { id: 'overview', label: 'Dashboard', icon: LayoutDashboard },
   { id: 'campaigns', label: 'Campaigns', icon: Layers },
-  { id: 'draws', label: 'Draws & Winners', icon: Trophy },
   { id: 'inventory', label: 'Inventory', icon: Package },
   { id: 'reviews', label: 'Payment Reviews', icon: CheckSquare },
   { id: 'reservations', label: 'Reservations', icon: Ticket },
   { id: 'customers', label: 'Customers', icon: Users },
   { id: 'outbox', label: 'Outbox Queue', icon: Send },
-  { id: 'audit', label: 'Audit Trail', icon: Shield },
   { id: 'settings', label: 'Settings', icon: Settings },
 ];
 
@@ -142,8 +134,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [activeTab, setActiveTab] = useState<AdminTab>('overview');
   const [inspectLotteryId, setInspectLotteryId] = useState<string | undefined>(undefined);
   const [inspectLotteryTitle, setInspectLotteryTitle] = useState<string | undefined>(undefined);
-  const [auditFilterUserId, setAuditFilterUserId] = useState<string | undefined>(undefined);
-  const [auditFilterUserName, setAuditFilterUserName] = useState<string | undefined>(undefined);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [pendingReviewsCount, setPendingReviewsCount] = useState<number | null>(null);
@@ -405,7 +395,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               {activeTab === 'campaigns' && (
                 <CampaignsView onInspectInventory={handleInspectInventory} />
               )}
-              {activeTab === 'draws' && <DrawsView currentAdmin={admin} />}
               {activeTab === 'refunds' && <RefundsView />}
               {activeTab === 'inventory' && (
                 <InventoryView
@@ -415,30 +404,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               )}
               {activeTab === 'reviews' && <PaymentReviewsView />}
               {activeTab === 'reservations' && <ReservationsView />}
-              {activeTab === 'customers' && (
-                <CustomersView
-                  onNavigateToAudit={(userId, userName) => {
-                    setAuditFilterUserId(userId);
-                    setAuditFilterUserName(userName);
-                    setActiveTab('audit');
-                  }}
-                />
-              )}
+              {activeTab === 'customers' && <CustomersView />}
               {activeTab === 'outbox' && <OutboxView />}
-              {activeTab === 'audit' && (
-                <AuditLogsView
-                  currentAdmin={admin}
-                  initialActorUserId={auditFilterUserId}
-                  initialActorName={auditFilterUserName}
-                  onClearUserFilter={() => {
-                    setAuditFilterUserId(undefined);
-                    setAuditFilterUserName(undefined);
-                  }}
-                  onNavigateToCustomer={(_userId) => {
-                    setActiveTab('customers');
-                  }}
-                />
-              )}
               {activeTab === 'settings' && <SettingsView currentAdmin={admin} />}
             </AdminErrorBoundary>
           </div>

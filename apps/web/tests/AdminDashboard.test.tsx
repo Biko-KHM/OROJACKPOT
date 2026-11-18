@@ -518,13 +518,8 @@ describe('Step 10: Admin Dashboard & Verification Engine', () => {
       expect(screen.getByText('Create Campaign')).toBeInTheDocument();
     });
 
-    // 2. Click "Draws & Winners"
-    fireEvent.click(screen.getByRole('button', { name: /Draws & Winners/i }));
-    await waitFor(() => {
-      expect(screen.getByText('Cryptographic Draws & Winner Selection')).toBeInTheDocument();
-    });
-
-    // 3. Verify Refunds is removed from sidebar
+    // 2. Verify "Draws & Winners" and "Refunds" are removed from sidebar
+    expect(screen.queryByRole('button', { name: /Draws & Winners/i })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /^Refunds$/i })).not.toBeInTheDocument();
 
     // 4. Click "Inventory"
@@ -557,11 +552,8 @@ describe('Step 10: Admin Dashboard & Verification Engine', () => {
       expect(screen.getByText('Outbox & Telegram Queue Monitor')).toBeInTheDocument();
     });
 
-    // 9. Click "Audit Trail"
-    fireEvent.click(screen.getByRole('button', { name: /Audit Trail/i }));
-    await waitFor(() => {
-      expect(screen.getByText('Cryptographic Audit Trail')).toBeInTheDocument();
-    });
+    // 8. Verify "Audit Trail" is removed from sidebar
+    expect(screen.queryByRole('button', { name: /Audit Trail/i })).not.toBeInTheDocument();
 
     // 10. Click "Settings"
     fireEvent.click(screen.getByRole('button', { name: /Settings/i }));

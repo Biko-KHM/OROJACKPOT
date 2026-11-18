@@ -274,13 +274,8 @@ describe('Step 11: Draws and Refunds Frontend UI', () => {
       />,
     );
 
-    // Click Draws & Winners tab
-    const drawsTab = screen.getByRole('button', { name: /Draws & Winners/i });
-    fireEvent.click(drawsTab);
-
-    expect(screen.getByText('Cryptographic Draws & Winner Selection')).toBeInTheDocument();
-
-    // Verify Refunds tab is removed from sidebar
+    // Verify Draws & Winners tab and Refunds tab are removed from sidebar
+    expect(screen.queryByRole('button', { name: /Draws & Winners/i })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /^Refunds$/i })).not.toBeInTheDocument();
   });
 });
