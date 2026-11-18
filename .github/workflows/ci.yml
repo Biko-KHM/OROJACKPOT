@@ -1,0 +1,81 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: telegram_lottery
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Prisma Generate & DB Push
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/telegram_lottery?schema=public
+          DIRECT_URL: postgresql://postgres:postgres@localhost:5432/telegram_lottery?schema=public
+        run: |
+          npx prisma generate --schema=apps/api/prisma/schema.prisma
+          npx prisma db push --schema=apps/api/prisma/schema.prisma
+
+      - name: Lint & Format Check
+        run: |
+          npm run lint --if-present
+
+      - name: Typecheck
+        run: npm run typecheck --if-present
+
+      - name: Build Monorepo
+        run: npm run build
+
+      - name: Run Tests
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/telegram_lottery?schema=public
+          DIRECT_URL: postgresql://postgres:postgres@localhost:5432/telegram_lottery?schema=public
+          REDIS_URL: redis://localhost:6379
+          JWT_SECRET: ci_test_jwt_secret_must_be_at_least_32_characters_long
+          COOKIE_SECRET: ci_test_cookie_secret_at_least_32_characters_long
+          ADMIN_SESSION_SECRET: ci_test_admin_session_secret_at_least_32_chars
+          TOTP_ENCRYPTION_KEY: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+          TELEGRAM_BOT_TOKEN: ci_dummy_token
+          TELEGRAM_BOT_SECRET: ci_dummy_secret
+          TELEGRAM_WEBHOOK_SECRET: ci_dummy_secret
+        run: npm run test

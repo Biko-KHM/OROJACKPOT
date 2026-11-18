@@ -1,0 +1,379 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum UserRole {
+  CUSTOMER
+  ADMIN
+  SUPERADMIN
+}
+
+enum LotteryStatus {
+  DRAFT
+  OPEN
+  PAUSED
+  CLOSED
+  COMPLETED
+  CANCELLED
+  ARCHIVED
+}
+
+enum NumberStatus {
+  AVAILABLE
+  HELD
+  PENDING_REVIEW
+  RESERVED
+}
+
+enum ReservationStatus {
+  AWAITING_PAYMENT
+  PENDING_REVIEW
+  CONFIRMED
+  REJECTED
+  EXPIRED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  SUBMITTED
+  APPROVED
+  REJECTED
+}
+
+enum ClaimStatus {
+  ACTIVE
+  RELEASED
+}
+
+enum CommitmentStatus {
+  COMMITTED
+  EXECUTED
+  CANCELLED
+}
+
+model User {
+  id             String    @id @default(uuid()) @db.Uuid
+  telegramUserId BigInt    @unique @map("telegram_user_id")
+  username       String?
+  firstName      String?   @map("first_name")
+  lastName       String?   @map("last_name")
+  role           UserRole  @default(CUSTOMER)
+  isBlocked      Boolean   @default(false) @map("is_blocked")
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  adminCredential    AdminCredential?
+  reservations       Reservation[]
+  paymentReviews     PaymentReview[]
+  draws              Draw[]
+  drawCommitments    DrawCommitment[]
+  refunds            Refund[]
+  notifications      Notification[]
+  auditLogs          AuditLog[]
+  paymentSubmissions PaymentSubmission[]
+
+  @@index([role])
+  @@map("users")
+}
+
+model AdminCredential {
+  userId              String    @id @map("user_id") @db.Uuid
+  user                User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  email               String    @unique
+  passwordHash        String    @map("password_hash")
+  totpSecretEncrypted String?   @map("totp_secret_encrypted")
+  failedAttempts      Int       @default(0) @map("failed_attempts")
+  lockedUntil         DateTime? @map("locked_until") @db.Timestamptz
+  mustChangePassword  Boolean   @default(false) @map("must_change_password")
+
+  @@map("admin_credentials")
+}
+
+model Lottery {
+  id                    String        @id @default(uuid()) @db.Uuid
+  slug                  String        @unique
+  title                 String
+  description           String?
+  prizeDescription      String        @map("prize_description")
+  imageUrl              String?       @map("image_url")
+  status                LotteryStatus @default(DRAFT)
+  currency              String        @default("ETB") @db.Char(3)
+  ticketPriceMinor      BigInt        @map("ticket_price_minor")
+  numberStart           Int           @default(0) @map("number_start")
+  numberEnd             Int           @map("number_end")
+  maxNumbersPerPurchase Int           @default(20) @map("max_numbers_per_purchase")
+  holdMinutes           Int           @default(10) @map("hold_minutes")
+  startsAt              DateTime?     @map("starts_at") @db.Timestamptz
+  endsAt                DateTime?     @map("ends_at") @db.Timestamptz
+  paymentInstructions   String?       @map("payment_instructions")
+  createdBy             String?       @map("created_by") @db.Uuid
+  createdAt             DateTime      @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt             DateTime      @updatedAt @map("updated_at") @db.Timestamptz
+
+  numbers          LotteryNumber[]
+  reservations     Reservation[]
+  reservationItems ReservationItem[]
+  draws            Draw[]
+  drawCommitments  DrawCommitment[]
+  channelPosts     ChannelPost[]
+
+  @@index([status, createdAt(sort: Desc)])
+  @@map("lotteries")
+}
+
+model LotteryNumber {
+  id          String       @id @default(uuid()) @db.Uuid
+  lotteryId   String       @map("lottery_id") @db.Uuid
+  numberValue Int          @map("number_value")
+  status      NumberStatus @default(AVAILABLE)
+  updatedAt   DateTime     @updatedAt @map("updated_at") @db.Timestamptz
+
+  lottery          Lottery           @relation(fields: [lotteryId], references: [id], onDelete: Cascade)
+  reservationItems ReservationItem[]
+  claims           NumberClaim[]
+
+  @@unique([lotteryId, numberValue])
+  @@unique([id, lotteryId])
+  @@index([lotteryId, status, numberValue])
+  @@map("lottery_numbers")
+}
+
+model Reservation {
+  id               String            @id @default(uuid()) @db.Uuid
+  publicReference  String            @unique @map("public_reference")
+  userId           String            @map("user_id") @db.Uuid
+  lotteryId        String            @map("lottery_id") @db.Uuid
+  status           ReservationStatus @default(AWAITING_PAYMENT)
+  currency         String            @default("ETB") @db.Char(3)
+  unitPriceMinor   BigInt            @map("unit_price_minor")
+  ticketCount      Int               @map("ticket_count")
+  totalAmountMinor BigInt            @map("total_amount_minor")
+  holdExpiresAt    DateTime?         @map("hold_expires_at") @db.Timestamptz
+  submittedAt      DateTime?         @map("submitted_at") @db.Timestamptz
+  reviewedAt       DateTime?         @map("reviewed_at") @db.Timestamptz
+  reviewedBy       String?           @map("reviewed_by") @db.Uuid
+  rejectionReason  String?           @map("rejection_reason")
+  idempotencyKey   String?           @map("idempotency_key")
+  requestHash      String?           @map("request_hash")
+  createdAt        DateTime          @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt        DateTime          @updatedAt @map("updated_at") @db.Timestamptz
+
+  user               User                @relation(fields: [userId], references: [id])
+  lottery            Lottery             @relation(fields: [lotteryId], references: [id])
+  items              ReservationItem[]
+  claims             NumberClaim[]
+  paymentSubmissions PaymentSubmission[]
+  refunds            Refund[]
+
+  @@unique([userId, idempotencyKey])
+  @@unique([id, lotteryId])
+  @@index([userId, status, createdAt(sort: Desc)])
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([status, holdExpiresAt])
+  @@index([lotteryId, status])
+  @@map("reservations")
+}
+
+model ReservationItem {
+  id                  String @id @default(uuid()) @db.Uuid
+  reservationId       String @map("reservation_id") @db.Uuid
+  lotteryId           String @map("lottery_id") @db.Uuid
+  lotteryNumberId     String @map("lottery_number_id") @db.Uuid
+  numberValueSnapshot Int    @map("number_value_snapshot")
+  unitPriceMinor      BigInt @map("unit_price_minor")
+
+  reservation   Reservation   @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+  lottery       Lottery       @relation(fields: [lotteryId], references: [id], onDelete: Cascade)
+  lotteryNumber LotteryNumber @relation(fields: [lotteryNumberId], references: [id], onDelete: Cascade)
+
+  @@unique([reservationId, lotteryNumberId])
+  @@index([lotteryId])
+  @@map("reservation_items")
+}
+
+model NumberClaim {
+  id              String      @id @default(uuid()) @db.Uuid
+  lotteryNumberId String      @map("lottery_number_id") @db.Uuid
+  reservationId   String      @map("reservation_id") @db.Uuid
+  status          ClaimStatus @default(ACTIVE)
+  expiresAt       DateTime?   @map("expires_at") @db.Timestamptz
+  createdAt       DateTime    @default(now()) @map("created_at") @db.Timestamptz
+  releasedAt      DateTime?   @map("released_at") @db.Timestamptz
+
+  lotteryNumber LotteryNumber @relation(fields: [lotteryNumberId], references: [id], onDelete: Cascade)
+  reservation   Reservation   @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+
+  @@index([reservationId])
+  @@map("number_claims")
+}
+
+model PaymentSubmission {
+  id                 String        @id @default(uuid()) @db.Uuid
+  reservationId      String        @map("reservation_id") @db.Uuid
+  submittedBy        String        @map("submitted_by") @db.Uuid
+  storageKey         String        @map("storage_key")
+  originalFilename   String        @map("original_filename")
+  mimeType           String        @map("mime_type")
+  fileSizeBytes      BigInt        @map("file_size_bytes")
+  fileSha256         String        @map("file_sha256")
+  claimedAmountMinor BigInt?       @map("claimed_amount_minor")
+  paymentReference   String?       @map("payment_reference")
+  status             PaymentStatus @default(SUBMITTED)
+  createdAt          DateTime      @default(now()) @map("created_at") @db.Timestamptz
+
+  reservation Reservation     @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+  submitter   User            @relation(fields: [submittedBy], references: [id])
+  reviews     PaymentReview[]
+
+  @@index([status, createdAt(sort: Desc)])
+  @@index([reservationId])
+  @@map("payment_submissions")
+}
+
+model PaymentReview {
+  id                     String   @id @default(uuid()) @db.Uuid
+  paymentSubmissionId    String   @map("payment_submission_id") @db.Uuid
+  reviewerId             String   @map("reviewer_id") @db.Uuid
+  decision               String
+  reason                 String?
+  comparedWithBankRecord Boolean  @map("compared_with_bank_record")
+  createdAt              DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  submission PaymentSubmission @relation(fields: [paymentSubmissionId], references: [id], onDelete: Cascade)
+  reviewer   User              @relation(fields: [reviewerId], references: [id])
+
+  @@index([paymentSubmissionId])
+  @@map("payment_reviews")
+}
+
+model DrawCommitment {
+  id                   String           @id @default(uuid()) @db.Uuid
+  lotteryId            String           @map("lottery_id") @db.Uuid
+  prizeLabel           String           @map("prize_label")
+  drawOrder            Int              @default(1) @map("draw_order")
+  serverSeedCommitment String           @map("server_seed_commitment")
+  snapshotHash         String           @map("snapshot_hash")
+  eligibleCount        Int              @map("eligible_count")
+  snapshotEntries      Json             @map("snapshot_entries")
+  publicEntropySource  String           @default("MULTI_PARTY_CLIENT_SEED") @map("public_entropy_source")
+  publicEntropy        String?          @map("public_entropy")
+  serverSecretSeed     String           @map("server_secret_seed")
+  status               CommitmentStatus @default(COMMITTED)
+  committedBy          String           @map("committed_by") @db.Uuid
+  committedAt          DateTime         @default(now()) @map("committed_at") @db.Timestamptz
+  executedAt           DateTime?        @map("executed_at") @db.Timestamptz
+
+  lottery   Lottery @relation(fields: [lotteryId], references: [id])
+  committer User    @relation(fields: [committedBy], references: [id])
+  draw      Draw?
+
+  @@unique([lotteryId, prizeLabel])
+  @@index([lotteryId, status])
+  @@map("draw_commitments")
+}
+
+model Draw {
+  id                   String          @id @default(uuid()) @db.Uuid
+  lotteryId            String          @map("lottery_id") @db.Uuid
+  commitmentId         String?         @unique @map("commitment_id") @db.Uuid
+  prizeLabel           String          @map("prize_label")
+  drawOrder            Int             @default(1) @map("draw_order")
+  eligibleCount        Int             @map("eligible_count")
+  eligibleSetSha256    String          @map("eligible_set_sha256")
+  snapshotHash         String?         @map("snapshot_hash")
+  serverSeedCommitment String?         @map("server_seed_commitment")
+  serverSeedRevealed   String?         @map("server_seed_revealed")
+  publicEntropy        String?         @map("public_entropy")
+  algorithmVersion     String          @default("HIREE-VRF-v1.0") @map("algorithm_version")
+  randomSeed           String          @map("random_seed")
+  winningNumber        Int             @map("winning_number")
+  winningIndex         Int             @default(0) @map("winning_index")
+  verificationProof    Json?           @map("verification_proof")
+  runBy                String          @map("run_by") @db.Uuid
+  createdAt            DateTime        @default(now()) @map("created_at") @db.Timestamptz
+
+  lottery    Lottery         @relation(fields: [lotteryId], references: [id])
+  runner     User            @relation(fields: [runBy], references: [id])
+  commitment DrawCommitment? @relation(fields: [commitmentId], references: [id])
+
+  @@unique([lotteryId, prizeLabel])
+  @@map("draws")
+}
+
+model Refund {
+  id            String   @id @default(uuid()) @db.Uuid
+  reservationId String   @map("reservation_id") @db.Uuid
+  amountMinor   BigInt   @map("amount_minor")
+  status        String   @default("PENDING")
+  handledBy     String?  @map("handled_by") @db.Uuid
+  note          String?
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  reservation Reservation @relation(fields: [reservationId], references: [id])
+  handler     User?       @relation(fields: [handledBy], references: [id])
+
+  @@map("refunds")
+}
+
+model OutboxEvent {
+  id            String   @id @default(uuid()) @db.Uuid
+  eventType     String   @map("event_type")
+  payload       Json
+  status        String   @default("PENDING")
+  attempts      Int      @default(0)
+  nextAttemptAt DateTime @default(now()) @map("next_attempt_at") @db.Timestamptz
+  lastError     String?  @map("last_error")
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  @@index([status, nextAttemptAt])
+  @@map("outbox_events")
+}
+
+model Notification {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  eventType String   @map("event_type")
+  payload   Json
+  status    String   @default("PENDING")
+  attempts  Int      @default(0)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("notifications")
+}
+
+model ChannelPost {
+  id              String    @id @default(uuid()) @db.Uuid
+  lotteryId       String    @map("lottery_id") @db.Uuid
+  chatId          BigInt    @map("chat_id")
+  messageId       BigInt    @map("message_id")
+  postType        String    @map("post_type")
+  lastPublishedAt DateTime? @map("last_published_at") @db.Timestamptz
+
+  lottery Lottery @relation(fields: [lotteryId], references: [id])
+
+  @@map("channel_posts")
+}
+
+model AuditLog {
+  id          String   @id @default(uuid()) @db.Uuid
+  actorUserId String?  @map("actor_user_id") @db.Uuid
+  action      String
+  entityType  String   @map("entity_type")
+  entityId    String   @map("entity_id") @db.Uuid
+  requestId   String?  @map("request_id")
+  details     Json?
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  actor User? @relation(fields: [actorUserId], references: [id])
+
+  @@index([entityType, entityId, createdAt(sort: Desc)])
+  @@map("audit_logs")
+}

@@ -1,0 +1,35 @@
+{
+  "name": "tg-lottery-monorepo",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Telegram Lottery Mini App Monorepo",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "dev:api": "npm run dev --workspace=@tg-lottery/api",
+    "dev:web": "npm run dev --workspace=@tg-lottery/web",
+    "start:api": "npm run start --workspace=@tg-lottery/api",
+    "build": "npm run build --workspaces --if-present",
+    "build:web": "npm run build --workspace=@tg-lottery/shared && npm run build --workspace=@tg-lottery/web",
+    "build:api": "npm run build --workspace=@tg-lottery/shared && npm run prisma:generate --workspace=@tg-lottery/api && npm run build --workspace=@tg-lottery/api",
+    "prisma:deploy": "npm run prisma:deploy --workspace=@tg-lottery/api",
+    "prisma:push": "npm run prisma:push --workspace=@tg-lottery/api",
+    "prisma:seed": "npm run prisma:seed --workspace=@tg-lottery/api",
+    "db:clean": "tsx scripts/clean-database.ts",
+    "test": "npm run test --workspaces --if-present",
+    "lint": "eslint .",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md}\""
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.5",
+    "@typescript-eslint/eslint-plugin": "^8.72.0",
+    "@typescript-eslint/parser": "^8.72.0",
+    "eslint": "^9.39.5",
+    "prettier": "^3.3.3",
+    "typescript": "^5.6.3"
+  }
+}

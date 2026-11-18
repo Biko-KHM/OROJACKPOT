@@ -1,0 +1,427 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Noto+Sans+Ethiopic:wght@400;500;600;700&family=Poppins:wght@400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* ------------------------------------------------------------------------ */
+    /* Typography System Variables                                              */
+    /* ------------------------------------------------------------------------ */
+    --font-sans: 'Inter', 'Noto Sans Ethiopic', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --font-display: 'Poppins', 'Noto Sans Ethiopic', sans-serif;
+    --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+
+    --background: 224 71% 4%;
+    --foreground: 213 31% 91%;
+
+    --card: 224 71% 6%;
+    --card-foreground: 213 31% 91%;
+
+    --popover: 224 71% 6%;
+    --popover-foreground: 213 31% 91%;
+
+    --primary: 210 100% 52%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 222 47% 14%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 223 47% 11%;
+    --muted-foreground: 215 20% 65%;
+
+    --accent: 216 34% 17%;
+    --accent-foreground: 210 40% 98%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 216 34% 17%;
+    --input: 216 34% 17%;
+    --ring: 216 100% 55%;
+
+    --radius: 0.75rem;
+  }
+}
+
+html {
+  font-size: 15.5px;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+@media (min-width: 640px) {
+  html {
+    font-size: 16px;
+  }
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: var(--font-sans);
+  font-feature-settings: 'rlig' 1, 'calt' 1;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* 1. Display Font (Poppins): Headings, titles, important text elements */
+h1, h2, h3, h4, h5, h6, .font-display {
+  font-family: var(--font-display);
+}
+
+/* 2. Monospace Font (JetBrains Mono): Code, access codes, technical data, countdowns */
+code, kbd, samp, pre, .font-mono {
+  font-family: var(--font-mono);
+}
+
+/* 3. Primary Selection Color */
+::selection {
+  background-color: rgba(16, 185, 129, 0.3);
+  color: #a7f3d0;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Creative Typography & Viewfinder Accent Styles (Ref. Portfolio Theme)      */
+/* -------------------------------------------------------------------------- */
+
+/* Cyberpunk / Developer Viewfinder Corner Brackets */
+.bracket-tag {
+  position: relative;
+  display: inline-block;
+  padding: 0 0.35em;
+}
+
+.bracket-tag::before {
+  content: '';
+  position: absolute;
+  top: -3px;
+  left: -2px;
+  width: 6px;
+  height: 6px;
+  border-top: 2px solid currentColor;
+  border-left: 2px solid currentColor;
+}
+
+.bracket-tag::after {
+  content: '';
+  position: absolute;
+  bottom: -3px;
+  right: -2px;
+  width: 6px;
+  height: 6px;
+  border-bottom: 2px solid currentColor;
+  border-right: 2px solid currentColor;
+}
+
+/* Soft atmospheric glowing text effect */
+.glow-teal {
+  text-shadow: 0 0 18px rgba(20, 184, 166, 0.4);
+}
+
+.glow-emerald {
+  text-shadow: 0 0 18px rgba(16, 185, 129, 0.4);
+}
+
+/* Portfolio-style Creative Action Buttons */
+.btn-hero-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  background-color: #0d9488;
+  color: #020617;
+  font-weight: 700;
+  border-radius: 0.75rem;
+  padding: 0.625rem 1.25rem;
+  font-size: 0.875rem;
+  transition: all 0.2s ease;
+  box-shadow: 0 10px 25px -5px rgba(13, 148, 136, 0.3);
+}
+
+.btn-hero-primary:hover {
+  background-color: #14b8a6;
+  transform: translateY(-1px);
+}
+
+.btn-hero-ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  background-color: #ffffff;
+  color: #0d9488;
+  font-weight: 700;
+  border-radius: 0.75rem;
+  padding: 0.625rem 1.25rem;
+  font-size: 0.875rem;
+  transition: all 0.2s ease;
+}
+
+.btn-hero-ghost:hover {
+  background-color: #f8fafc;
+  transform: translateY(-1px);
+}
+
+/* -------------------------------------------------------------------------- */
+/* FulusApp Telegram Mini App Design System                                   */
+/* -------------------------------------------------------------------------- */
+
+.fulus-theme-bg {
+  background-color: #080b10;
+}
+
+.fulus-card {
+  background-color: #0e131b;
+  border: 1px solid #1a2230;
+  border-radius: 1.5rem;
+}
+
+.fulus-card-nested {
+  background-color: #131923;
+  border: 1px solid #1e2838;
+  border-radius: 1rem;
+}
+
+.fulus-btn-primary {
+  background-color: #00d26a;
+  color: #ffffff;
+  font-weight: 700;
+  border-radius: 0.875rem;
+  padding: 0.55rem 1.15rem;
+  font-size: 0.8125rem;
+  transition: all 0.15s ease-in-out;
+  box-shadow: 0 4px 14px 0 rgba(0, 210, 106, 0.25);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.fulus-btn-primary:hover {
+  background-color: #00bf60;
+  transform: translateY(-1px);
+}
+
+.fulus-btn-primary:active {
+  transform: scale(0.97);
+}
+
+.fulus-btn-locked {
+  background-color: #121822;
+  border: 1px solid #1e2736;
+  color: #64748b;
+  border-radius: 0.875rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.fulus-icon-box-green {
+  background-color: #0c251b;
+  border: 1px solid #123c2a;
+  color: #00d26a;
+  border-radius: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.fulus-icon-box-amber {
+  background-color: #261a0c;
+  border: 1px solid #422b13;
+  color: #f59e0b;
+  border-radius: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.fulus-text-green {
+  color: #00d26a;
+}
+
+.fulus-dock-active {
+  background-color: #00d26a;
+  color: #ffffff;
+  font-weight: 700;
+  border-radius: 9999px;
+  padding: 0.5rem 1.15rem;
+  box-shadow: 0 4px 16px 0 rgba(0, 210, 106, 0.35);
+}
+
+/* -------------------------------------------------------------------------- */
+/* Modern Dark Luxury Scrollbar System                                        */
+/* -------------------------------------------------------------------------- */
+
+/* Global standard scrollbar for Firefox & modern engines */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #1e2838 transparent;
+}
+
+/* Global WebKit scrollbars (Chrome, Edge, Safari, Opera) */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #1e2838;
+  border-radius: 9999px;
+  border: 1px solid transparent;
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #334155;
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* Eradicate native OS buttons & arrow triangles */
+::-webkit-scrollbar-button {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+/* Modern floating custom scrollbar with subtle brand neon accent on hover */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #1e2838 transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #1e2838;
+  border-radius: 9999px;
+  transition: background-color 0.2s ease;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #00d26a;
+}
+
+.custom-scrollbar::-webkit-scrollbar-button {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+/* Invisible / Hidden scrollbar (100% smooth scrollable without visual bar) */
+.no-scrollbar,
+.invisible-scrollbar {
+  -ms-overflow-style: none !important; /* IE and Edge */
+  scrollbar-width: none !important;    /* Firefox */
+}
+
+.no-scrollbar::-webkit-scrollbar,
+.invisible-scrollbar::-webkit-scrollbar {
+  display: none !important;            /* Chrome, Safari, Edge */
+  width: 0 !important;
+  height: 0 !important;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Telegram Mini App Mobile Ergonomics & Safe-Area System                     */
+/* -------------------------------------------------------------------------- */
+
+/* Safe area support for iOS notch & Telegram header / gesture bar */
+.pt-safe {
+  padding-top: max(env(safe-area-inset-top, 0px), 0.5rem);
+}
+
+.pb-safe {
+  padding-bottom: max(env(safe-area-inset-bottom, 0px), 1rem);
+}
+
+.pb-safe-dock {
+  padding-bottom: max(calc(env(safe-area-inset-bottom, 0px) + 5.5rem), 6rem);
+}
+
+/* Remove 300ms double-tap delay and grey flash on mobile browsers */
+button,
+a,
+input,
+label,
+[role='button'] {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+/* Smooth rubber-band scrolling on iOS Telegram WebApp */
+.scroll-touch {
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Creative Ethiopian Lottery Ticket Notch & Perforation Effect */
+.ticket-stub {
+  position: relative;
+  background-color: #0e131b;
+  border: 1px solid #1a2230;
+  border-radius: 1.25rem;
+  overflow: hidden;
+}
+
+.ticket-notch-divider {
+  position: relative;
+  border-top: 1px dashed #1e2838;
+  margin: 0.75rem 0;
+}
+
+.ticket-notch-divider::before,
+.ticket-notch-divider::after {
+  content: '';
+  position: absolute;
+  top: -8px;
+  width: 16px;
+  height: 16px;
+  border-radius: 9999px;
+  background-color: #080b10;
+  border: 1px solid #1a2230;
+  box-sizing: border-box;
+}
+
+.ticket-notch-divider::before {
+  left: -20px;
+}
+
+.ticket-notch-divider::after {
+  right: -20px;
+}
+
+/* Radiant glow pulse */
+@keyframes neon-pulse {
+  0%, 100% {
+    box-shadow: 0 0 15px rgba(0, 210, 106, 0.25);
+  }
+  50% {
+    box-shadow: 0 0 25px rgba(0, 210, 106, 0.45);
+  }
+}
+
+.neon-glow-card {
+  animation: neon-pulse 3s infinite ease-in-out;
+}
+
+
