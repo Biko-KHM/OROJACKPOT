@@ -548,11 +548,8 @@ describe('Step 10: Admin Dashboard & Verification Engine', () => {
       expect(screen.getByText('Customer Accounts & Activity')).toBeInTheDocument();
     });
 
-    // 8. Click "Outbox Queue"
-    fireEvent.click(screen.getByRole('button', { name: /Outbox Queue/i }));
-    await waitFor(() => {
-      expect(screen.getByText('Outbox & Telegram Queue Monitor')).toBeInTheDocument();
-    });
+    // 8. Verify "Outbox Queue" is removed from sidebar
+    expect(screen.queryByRole('button', { name: /Outbox Queue/i })).not.toBeInTheDocument();
 
     // 8. Verify "Audit Trail" is removed from sidebar
     expect(screen.queryByRole('button', { name: /Audit Trail/i })).not.toBeInTheDocument();

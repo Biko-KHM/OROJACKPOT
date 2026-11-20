@@ -16,7 +16,7 @@ async function main() {
   const superadminEmail = (process.env.INITIAL_SUPERADMIN_EMAIL || 'admin@orojackpot.com').toLowerCase().trim();
   const superadminPassword = process.env.INITIAL_SUPERADMIN_PASSWORD || 'OrojackpotAdmin2026!';
   const superadminTgId = BigInt(process.env.INITIAL_SUPERADMIN_TG_ID || process.env.SUPERADMIN_TELEGRAM_ID || '123456789');
-  const seedSample = process.env.SEED_SAMPLE_DATA === 'true' || !isProd;
+  const seedSample = process.env.SEED_SAMPLE_DATA === 'true';
 
   console.log(`[Seed] Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`[Seed] Initializing Superadmin account for: ${superadminEmail}`);

@@ -6,7 +6,6 @@ import {
   CheckSquare,
   Ticket,
   Users,
-  Send,
   Settings,
   LogOut,
   ExternalLink,
@@ -25,7 +24,6 @@ import { InventoryView } from './InventoryView.js';
 import { PaymentReviewsView } from './PaymentReviewsView.js';
 import { ReservationsView } from './ReservationsView.js';
 import { CustomersView } from './CustomersView.js';
-import { OutboxView } from './OutboxView.js';
 import { SettingsView } from './SettingsView.js';
 
 interface AdminDashboardProps {
@@ -42,7 +40,6 @@ export type AdminTab =
   | 'reviews'
   | 'reservations'
   | 'customers'
-  | 'outbox'
   | 'settings';
 
 interface NavItem {
@@ -59,7 +56,6 @@ const NAV_ITEMS: NavItem[] = [
   { id: 'reviews', label: 'Payment Reviews', icon: CheckSquare },
   { id: 'reservations', label: 'Reservations', icon: Ticket },
   { id: 'customers', label: 'Customers', icon: Users },
-  { id: 'outbox', label: 'Outbox Queue', icon: Send },
   { id: 'settings', label: 'Settings', icon: Settings },
 ];
 
@@ -405,7 +401,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               {activeTab === 'reviews' && <PaymentReviewsView />}
               {activeTab === 'reservations' && <ReservationsView />}
               {activeTab === 'customers' && <CustomersView />}
-              {activeTab === 'outbox' && <OutboxView />}
               {activeTab === 'settings' && <SettingsView currentAdmin={admin} />}
             </AdminErrorBoundary>
           </div>

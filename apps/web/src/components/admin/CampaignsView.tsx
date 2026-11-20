@@ -65,8 +65,8 @@ export const CampaignsView: React.FC<CampaignsViewProps> = ({ onInspectInventory
       id: 'acc-1',
       type: 'bank',
       title: 'Commercial Bank of Ethiopia (CBE)',
-      accountNumber: '1000 4892 1092 3',
-      accountName: 'Abebe Lottery Ent.',
+      accountNumber: '',
+      accountName: 'OROJACKPOT Official CBE Account',
     },
   ]);
   const [paymentNote, setPaymentNote] = useState<string>(
@@ -94,8 +94,8 @@ export const CampaignsView: React.FC<CampaignsViewProps> = ({ onInspectInventory
     if (paymentAccounts.length >= 4) return;
     const newId = `acc-${Date.now()}`;
     const nextDefaultTitle = paymentAccounts.length === 1 ? 'Telebirr SuperApp Transfer' : '';
-    const nextDefaultNumber = paymentAccounts.length === 1 ? '0911 23 45 67' : '';
-    const nextDefaultName = paymentAccounts.length === 1 ? 'Abebe Kebede' : '';
+    const nextDefaultNumber = paymentAccounts.length === 1 ? '' : '';
+    const nextDefaultName = paymentAccounts.length === 1 ? 'OROJACKPOT Official Telebirr' : '';
     const isTelebirr = /telebirr|phone|mobile/i.test(nextDefaultTitle);
     const newAcc: PaymentAccount = {
       id: newId,
@@ -753,8 +753,8 @@ export const CampaignsView: React.FC<CampaignsViewProps> = ({ onInspectInventory
           id: 'acc-1',
           type: 'bank',
           title: 'Commercial Bank of Ethiopia (CBE)',
-          accountNumber: '1000 4892 1092 3',
-          accountName: 'Abebe Lottery Ent.',
+          accountNumber: '',
+          accountName: 'OROJACKPOT Official CBE Account',
         },
       ]);
       setPaymentNote('Please upload your payment screenshot after completing transfer.');

@@ -8,7 +8,6 @@ import {
   Layers,
   RefreshCw,
   ArrowRight,
-  ShieldAlert,
   Coins,
 } from 'lucide-react';
 import { api } from '../../api/client.js';
@@ -208,45 +207,6 @@ export const AdminOverviewView: React.FC<AdminOverviewViewProps> = ({ onNavigate
           </div>
           <div className="mt-3 text-[11px] text-[#94a3b8] flex items-center gap-1 font-bold">
             <span>View Customers</span>
-            <ArrowRight className="w-3.5 h-3.5" />
-          </div>
-        </div>
-
-        {/* Failed Outbox Events */}
-        <div
-          onClick={() => onNavigateTab('outbox')}
-          className={`p-5 rounded-2xl border cursor-pointer transition-all ${
-            (metrics?.failedOutboxCount || 0) > 0
-              ? 'bg-rose-950/20 border-rose-500/40 hover:border-rose-400'
-              : 'fulus-card-nested hover:border-[#1a2230]'
-          }`}
-        >
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-xs font-bold text-[#94a3b8] uppercase tracking-wider">
-              Failed Outbox Events
-            </span>
-            <div
-              className={`w-10 h-10 rounded-2xl flex items-center justify-center ${
-                (metrics?.failedOutboxCount || 0) > 0
-                  ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
-                  : 'bg-[#151c27] border border-[#1a2230] text-[#94a3b8]'
-              }`}
-            >
-              <ShieldAlert className="w-5 h-5" />
-            </div>
-          </div>
-          <div className="flex items-baseline gap-2">
-            <div className="text-2xl font-black text-white tracking-tight font-display">
-              {metrics?.failedOutboxCount || 0}
-            </div>
-            {(metrics?.failedOutboxCount || 0) > 0 && (
-              <span className="text-xs font-bold text-rose-400 bg-rose-500/20 px-2 py-0.5 rounded-full">
-                Delivery Errors
-              </span>
-            )}
-          </div>
-          <div className="mt-3 text-[11px] text-[#94a3b8] flex items-center gap-1 font-bold">
-            <span>Inspect & Retry Outbox</span>
             <ArrowRight className="w-3.5 h-3.5" />
           </div>
         </div>
