@@ -8,6 +8,7 @@
     "apps/*"
   ],
   "scripts": {
+    "start": "npm run start:api",
     "dev:api": "npm run dev --workspace=@tg-lottery/api",
     "dev:web": "npm run dev --workspace=@tg-lottery/web",
     "start:api": "npm run start --workspace=@tg-lottery/api",
