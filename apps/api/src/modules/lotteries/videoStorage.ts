@@ -4,6 +4,7 @@ import { Request, Response } from 'express';
 import { config } from '../../config/index.js';
 import { logger } from '../../logger/index.js';
 import { getTelegramClient } from '../telegram/client.js';
+import { getPlatformTelegramChannelId } from '../platform/settings.js';
 
 const LOCAL_STORAGE_DIR = path.resolve(process.cwd(), 'data/storage/draw-videos');
 
@@ -22,7 +23,7 @@ export async function uploadDrawVideoToTelegram(
   campaignTitle: string,
 ): Promise<string> {
   const client = getTelegramClient();
-  const channelId = config.TELEGRAM_CHANNEL_ID;
+  const channelId = getPlatformTelegramChannelId();
   const isDummyToken = !config.TELEGRAM_BOT_TOKEN || config.TELEGRAM_BOT_TOKEN.includes('dummy');
 
   if (!isDummyToken && channelId) {

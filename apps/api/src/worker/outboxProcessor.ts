@@ -1,11 +1,11 @@
 import { prisma } from '../db/index.js';
-import { config } from '../config/index.js';
 import { logger } from '../logger/index.js';
 import {
   getTelegramClient,
   TelegramRateLimitError,
 } from '../modules/telegram/client.js';
 import { updateChannelProgressPost } from '../modules/telegram/service.js';
+import { getPlatformTelegramChannelId } from '../modules/platform/settings.js';
 
 export interface OutboxProcessResult {
   processed: number;
@@ -49,9 +49,9 @@ export async function processOutboxEvent(event: {
 
   switch (eventType) {
     case 'ADMIN_NOTIFICATION': {
-      const channelId = config.TELEGRAM_CHANNEL_ID;
+      const channelId = getPlatformTelegramChannelId();
       if (!channelId) {
-        logger.debug('No TELEGRAM_CHANNEL_ID configured for ADMIN_NOTIFICATION; skipping message');
+        logger.debug('No channel configured in Superadmin Settings for ADMIN_NOTIFICATION; skipping message');
         return;
       }
 
@@ -161,7 +161,7 @@ export async function processOutboxEvent(event: {
     }
 
     case 'DRAW_ANNOUNCEMENT': {
-      const channelId = config.TELEGRAM_CHANNEL_ID;
+      const channelId = getPlatformTelegramChannelId();
       if (channelId && payload.lotteryTitle && payload.winningNumber !== undefined) {
         try {
           const drawMsg =

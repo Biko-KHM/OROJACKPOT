@@ -3,6 +3,7 @@ import { prisma } from '../../db/index.js';
 import { config } from '../../config/index.js';
 import { logger } from '../../logger/index.js';
 import { getTelegramClient } from './client.js';
+import { getPlatformTelegramChannelId } from '../platform/settings.js';
 import {
   approvePaymentSubmission,
   rejectPaymentSubmission,
@@ -679,9 +680,9 @@ export async function updateChannelProgressPost(
   lotteryId: string,
   options?: { force?: boolean },
 ): Promise<{ success: boolean; throttled?: boolean; nextAllowedAt?: Date; channelConfigured?: boolean }> {
-  const channelId = config.TELEGRAM_CHANNEL_ID;
+  const channelId = getPlatformTelegramChannelId();
   if (!channelId) {
-    logger.debug('No TELEGRAM_CHANNEL_ID configured; skipping channel progress update');
+    logger.debug('No Telegram channel configured in Superadmin Settings; skipping channel progress update');
     return { success: true, channelConfigured: false };
   }
 

@@ -7,6 +7,7 @@ import crypto from 'node:crypto';
 import { config } from './config/index.js';
 import { logger } from './logger/index.js';
 import { healthRouter } from './modules/health/routes.js';
+import { getBotUsername, getPlatformTelegramChannelId } from './modules/platform/settings.js';
 import { authRouter, adminAuthRouter } from './modules/auth/routes.js';
 import { lotteriesRouter, adminLotteriesRouter } from './modules/lotteries/routes.js';
 import { reservationsRouter, meRouter } from './modules/reservations/routes.js';
@@ -138,6 +139,18 @@ app.get('/', (_req: Request, res: Response) => {
   });
 });
 app.use('/health', healthRouter);
+
+// Public dynamic configuration (Bot username queried live via getMe from token, Channel ID from Superadmin settings)
+const handlePublicConfig = async (_req: Request, res: Response) => {
+  const botUsername = await getBotUsername();
+  res.status(200).json({
+    botUsername,
+    telegramChannelId: getPlatformTelegramChannelId(),
+    appTitle: 'OROJACKPOT',
+  });
+};
+app.get('/public-config', handlePublicConfig);
+app.get('/api/v1/public-config', handlePublicConfig);
 
 // Telegram Webhook
 app.use('/webhooks/telegram', telegramRouter);

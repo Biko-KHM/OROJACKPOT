@@ -70,6 +70,23 @@ const MainApp: React.FC = () => {
   const [isCheckingOut, setIsCheckingOut] = useState<boolean>(false);
   const [sessionRecoveredBanner, setSessionRecoveredBanner] = useState<boolean>(false);
   const [visitedTabs, setVisitedTabs] = useState<Record<string, boolean>>({ campaigns: true });
+  const [botUsername, setBotUsername] = useState<string>(() => {
+    return (typeof import.meta !== 'undefined' && import.meta.env?.VITE_TELEGRAM_BOT_USERNAME) || 'OrojackpotBot';
+  });
+
+  useEffect(() => {
+    let isMounted = true;
+    api.getPublicConfig().then((cfg) => {
+      if (isMounted && cfg?.botUsername) {
+        setBotUsername(cfg.botUsername);
+      }
+    }).catch(() => {
+      // ignore network errors
+    });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   useEffect(() => {
     if (['campaigns', 'history', 'about'].includes(currentScreen)) {
@@ -256,7 +273,7 @@ const MainApp: React.FC = () => {
         } else if (err.code === 'RESERVATION_LIMIT_EXCEEDED') {
           setConflictBanner(
             err.message ||
-              'Maximum active reservations reached. Please complete payment on your existing hold or cancel it first.',
+            'Maximum active reservations reached. Please complete payment on your existing hold or cancel it first.',
           );
         } else if (err.status === 401) {
           setConflictBanner('Session expired or unauthorized. Please re-open the mini app or refresh.');
@@ -324,7 +341,7 @@ const MainApp: React.FC = () => {
             tg.disableClosingConfirmation();
           }
           if (activeReservation) {
-            void api.cancelReservation(activeReservation.id).catch(() => {});
+            void api.cancelReservation(activeReservation.id).catch(() => { });
           }
           setActiveReservation(null);
           setCurrentScreen('campaigns');
@@ -455,7 +472,7 @@ const MainApp: React.FC = () => {
   // Administrative verification (Telegram ID environment binding OR database authenticated role)
   const isUserAdmin = Boolean(
     isSuperadminByTgId ||
-      (user && (user.role === 'ADMIN' || user.role === 'SUPERADMIN' || user.hasAdminCredential))
+    (user && (user.role === 'ADMIN' || user.role === 'SUPERADMIN' || user.hasAdminCredential))
   );
 
   // Graceful guest/demo fallback if opened outside Telegram client
@@ -477,7 +494,7 @@ const MainApp: React.FC = () => {
             </p>
             <div className="space-y-2.5 pt-2">
               <a
-                href={`https://t.me/${(typeof import.meta !== 'undefined' && import.meta.env?.VITE_TELEGRAM_BOT_USERNAME) || 'OrojackpotBot'}/app`}
+                href={`https://t.me/${botUsername}/app`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="fulus-btn-primary w-full py-3.5 rounded-xl font-bold text-xs sm:text-sm active:scale-95 shadow-xl flex items-center justify-center gap-2"

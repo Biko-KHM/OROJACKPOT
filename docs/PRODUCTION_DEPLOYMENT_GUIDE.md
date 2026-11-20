@@ -85,8 +85,8 @@ This repository includes a `render.yaml` specification at the root:
    - `DIRECT_URL`: Your Supabase port 5432 connection string.
    - `CORS_ORIGIN`: Your Vercel frontend URL, e.g. `https://your-mini-app.vercel.app,https://web.telegram.org`
    - `TELEGRAM_BOT_TOKEN`: The API token from `@BotFather`.
-   - `TELEGRAM_CHANNEL_ID`: Your public channel ID (e.g. `-1001234567890`) where draws and milestones post.
    - `REDIS_URL` *(Optional)*: Upstash or Render Redis URL (if omitted, falls back to the embedded zero-downtime memory adapter).
+   *(Note: `TELEGRAM_CHANNEL_ID` is NOT needed in Render environment variables; you configure and test your channel directly in the Superadmin Portal Settings).*
 5. Click **Apply**. Render will install, compile TypeScript, run the API, and start the outbox/expire worker.
 
 ### Option B: Manual Web Service on Render
@@ -120,8 +120,8 @@ curl -X POST "https://api.telegram.org/bot<TELEGRAM_BOT_TOKEN>/setWebhook" \
 4. Set **Environment Variables**:
    ```env
    VITE_API_URL=https://orojackpot-api.onrender.com
-   VITE_TELEGRAM_BOT_USERNAME=OrojackpotBot
    ```
+   *(Note: `VITE_TELEGRAM_BOT_USERNAME` is NOT required! The app dynamically fetches the active bot username from the backend API, which queries Telegram via `getMe`).*
 5. Click **Deploy**. Vercel will build the frontend with production minification, gzip assets, and SPA rewrite rules.
 
 ---

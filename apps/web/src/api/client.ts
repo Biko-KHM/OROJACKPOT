@@ -255,6 +255,16 @@ export function clearClientCache(keyPrefix?: string): void {
 }
 
 export const api = {
+  // Public App Configuration (Dynamic bot username from Bot Token via getMe, channel from Superadmin settings)
+  async getPublicConfig(): Promise<{ botUsername: string; telegramChannelId?: string; appTitle?: string }> {
+    try {
+      const res = await request<{ botUsername: string; telegramChannelId?: string; appTitle?: string }>('/public-config');
+      return res;
+    } catch {
+      return { botUsername: 'OrojackpotBot' };
+    }
+  },
+
   // 0. Customer profile
   async getMe(): Promise<CustomerUser> {
     const res = await request<CustomerUser | { user: CustomerUser }>('/me');

@@ -10,6 +10,7 @@ import {
 import { cache, CACHE_KEYS } from '../cache/index.js';
 import { deleteCampaignImageFromSupabase } from './storage.js';
 import { getTelegramClient } from '../telegram/client.js';
+import { getPlatformTelegramChannelId } from '../platform/settings.js';
 import { config } from '../../config/index.js';
 import { logger } from '../../logger/index.js';
 
@@ -908,9 +909,9 @@ export async function completeManualDraw({
     },
   });
 
-  // Broadcast winner to Telegram channel if configured
+  // Broadcast winner to Telegram channel if configured in Settings
   try {
-    const channelId = config.TELEGRAM_CHANNEL_ID;
+    const channelId = getPlatformTelegramChannelId();
     if (channelId && config.TELEGRAM_BOT_TOKEN && !config.TELEGRAM_BOT_TOKEN.includes('dummy')) {
       const client = getTelegramClient();
       const text =

@@ -21,7 +21,6 @@ import {
   LotteryStatus,
   NumberStatus,
 } from '@prisma/client';
-import { config } from '../../config/index.js';
 import { cache, CACHE_KEYS } from '../cache/index.js';
 import { clearSummaryCache } from '../lotteries/service.js';
 import { getTelegramClient } from '../telegram/client.js';
@@ -1508,62 +1507,19 @@ adminReviewRouter.get('/lotteries/:id/inventory', async (req: Request, res: Resp
   res.status(200).json(serialized);
 });
 
-// In-memory configurable platform settings with database & cache persistence
-export interface PlatformSettingsState {
-  dualApprovalRequired: boolean;
-  dualApprovalThresholdMinor: string;
-  reviewEscalationDelayMinutes: number;
-  maintenanceMode: boolean;
-  customerSupportTelegram: string;
-  telegramChannelId: string;
-}
+import {
+  PlatformSettingsState,
+  getPlatformTelegramChannelId,
+  getPlatformSettings,
+  updatePlatformSettingsState,
+} from '../platform/settings.js';
 
-let platformSettings: PlatformSettingsState = {
-  dualApprovalRequired: false,
-  dualApprovalThresholdMinor: '1000000', // 10,000.00 ETB
-  reviewEscalationDelayMinutes: 120, // 2 hours
-  maintenanceMode: false,
-  customerSupportTelegram: '@EthiopianLotterySupport',
-  telegramChannelId: config.TELEGRAM_CHANNEL_ID || '',
-};
-
-export function getPlatformTelegramChannelId(): string {
-  return platformSettings.telegramChannelId || config.TELEGRAM_CHANNEL_ID || '';
-}
-
-// Bootstrap saved settings from cache or DB audit log
-async function initPlatformSettings() {
-  try {
-    const cached = await cache.get<string>(CACHE_KEYS.PLATFORM_SETTINGS);
-    if (cached) {
-      const parsed = typeof cached === 'string' ? JSON.parse(cached) : cached;
-      platformSettings = { ...platformSettings, ...(parsed as Partial<PlatformSettingsState>) };
-      if (platformSettings.telegramChannelId) {
-        (config as { TELEGRAM_CHANNEL_ID?: string }).TELEGRAM_CHANNEL_ID = platformSettings.telegramChannelId;
-      }
-      return;
-    }
-
-    const latestAudit = await prisma.auditLog.findFirst({
-      where: { action: 'PLATFORM_SETTINGS_UPDATED', entityType: 'SETTINGS' },
-      orderBy: { createdAt: 'desc' },
-    });
-    if (latestAudit && latestAudit.details && typeof latestAudit.details === 'object') {
-      platformSettings = { ...platformSettings, ...(latestAudit.details as Record<string, unknown>) };
-      if (platformSettings.telegramChannelId) {
-        (config as { TELEGRAM_CHANNEL_ID?: string }).TELEGRAM_CHANNEL_ID = platformSettings.telegramChannelId;
-      }
-      await cache.set(CACHE_KEYS.PLATFORM_SETTINGS, JSON.stringify(platformSettings));
-    }
-  } catch {
-    // Non-fatal, use defaults
-  }
-}
-void initPlatformSettings();
+export type { PlatformSettingsState };
+export { getPlatformTelegramChannelId };
 
 // GET /admin/settings
 adminReviewRouter.get('/settings', (_req: Request, res: Response) => {
-  res.status(200).json(platformSettings);
+  res.status(200).json(getPlatformSettings());
 });
 
 // PATCH /admin/settings (SUPERADMIN only)
@@ -1578,17 +1534,9 @@ adminReviewRouter.patch('/settings', async (req: Request, res: Response) => {
     return;
   }
 
-  platformSettings = {
-    ...platformSettings,
-    ...req.body,
-  };
+  const updatedSettings = updatePlatformSettingsState(req.body);
 
-  if (typeof req.body.telegramChannelId === 'string') {
-    platformSettings.telegramChannelId = req.body.telegramChannelId.trim();
-    (config as { TELEGRAM_CHANNEL_ID?: string }).TELEGRAM_CHANNEL_ID = platformSettings.telegramChannelId;
-  }
-
-  await cache.set(CACHE_KEYS.PLATFORM_SETTINGS, JSON.stringify(platformSettings));
+  await cache.set(CACHE_KEYS.PLATFORM_SETTINGS, JSON.stringify(updatedSettings));
 
   await prisma.auditLog.create({
     data: {
@@ -1596,18 +1544,18 @@ adminReviewRouter.patch('/settings', async (req: Request, res: Response) => {
       action: 'PLATFORM_SETTINGS_UPDATED',
       entityType: 'SETTINGS',
       entityId: currentAdmin.id,
-      details: JSON.parse(JSON.stringify(platformSettings)),
+      details: JSON.parse(JSON.stringify(updatedSettings)),
       requestId,
     },
   });
 
-  res.status(200).json(platformSettings);
+  res.status(200).json(updatedSettings);
 });
 
 // POST /admin/settings/test-telegram-channel (Verify Telegram Channel Wiring)
 adminReviewRouter.post('/settings/test-telegram-channel', async (req: Request, res: Response) => {
   const requestId = req.headers['x-request-id'] as string;
-  const targetChannel = ((req.body?.channelId as string) || platformSettings.telegramChannelId || config.TELEGRAM_CHANNEL_ID || '').trim();
+  const targetChannel = ((req.body?.channelId as string) || getPlatformTelegramChannelId() || '').trim();
 
   if (!targetChannel) {
     res.status(400).json({
