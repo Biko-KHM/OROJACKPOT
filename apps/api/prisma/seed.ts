@@ -13,8 +13,8 @@ const prisma = new PrismaClient();
 
 async function main() {
   const isProd = process.env.NODE_ENV === 'production';
-  const superadminEmail = (process.env.INITIAL_SUPERADMIN_EMAIL || 'admin@hiree.com').toLowerCase().trim();
-  const superadminPassword = process.env.INITIAL_SUPERADMIN_PASSWORD || 'HireeAdmin2026!';
+  const superadminEmail = (process.env.INITIAL_SUPERADMIN_EMAIL || 'admin@orojackpot.com').toLowerCase().trim();
+  const superadminPassword = process.env.INITIAL_SUPERADMIN_PASSWORD || 'OrojackpotAdmin2026!';
   const superadminTgId = BigInt(process.env.INITIAL_SUPERADMIN_TG_ID || process.env.SUPERADMIN_TELEGRAM_ID || '123456789');
   const seedSample = process.env.SEED_SAMPLE_DATA === 'true' || !isProd;
 
@@ -72,7 +72,7 @@ async function main() {
       create: {
         slug: 'grand-launch-draw',
         title: 'Grand Inaugural Launch Draw',
-        description: 'Official inaugural draw for HIREE Lottery with 100 tickets.',
+        description: 'Official inaugural draw for OROJACKPOT with 100 tickets.',
         prizeDescription: 'Brand new iPhone 16 Pro Max or 150,000 ETB cash prize',
         status: LotteryStatus.OPEN,
         currency: 'ETB',
@@ -88,14 +88,14 @@ async function main() {
               type: 'bank',
               title: 'Commercial Bank of Ethiopia (CBE)',
               accountNumber: '1000 4892 1092 3',
-              accountName: 'HIREE Official Lottery',
+              accountName: 'OROJACKPOT Official Lottery',
             },
             {
               id: 'acc-telebirr',
               type: 'telebirr',
               title: 'Telebirr SuperApp Transfer',
               accountNumber: '0911 23 45 67',
-              accountName: 'HIREE Official Telebirr',
+              accountName: 'OROJACKPOT Official Telebirr',
             },
           ],
           note: 'Please transfer the exact amount and upload your official bank or Telebirr SMS/receipt screenshot.',

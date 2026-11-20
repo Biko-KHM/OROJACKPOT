@@ -39,8 +39,8 @@ export class AuthError extends Error {
  * Can be run on server startup or called on-demand during login.
  */
 export async function bootstrapSuperadmin(): Promise<void> {
-  const email = (process.env.INITIAL_SUPERADMIN_EMAIL || 'admin@hiree.com').toLowerCase().trim();
-  const password = process.env.INITIAL_SUPERADMIN_PASSWORD || 'HireeAdmin2026!';
+  const email = (process.env.INITIAL_SUPERADMIN_EMAIL || 'admin@orojackpot.com').toLowerCase().trim();
+  const password = process.env.INITIAL_SUPERADMIN_PASSWORD || 'OrojackpotAdmin2026!';
   const configuredTgIdStr = process.env.INITIAL_SUPERADMIN_TG_ID || process.env.SUPERADMIN_TELEGRAM_ID;
   const tgId =
     configuredTgIdStr && /^\d+$/.test(configuredTgIdStr.trim())
@@ -232,8 +232,8 @@ export async function authenticateTelegramCustomer(initData: string, requestId?:
 // 2. Admin Login (Stage 1: Credentials)
 export async function loginAdmin(email: string, password: string, requestId?: string) {
   const normalizedEmail = email.toLowerCase().trim();
-  const envSuperadminEmail = (process.env.INITIAL_SUPERADMIN_EMAIL || 'admin@hiree.com').toLowerCase().trim();
-  const envSuperadminPassword = process.env.INITIAL_SUPERADMIN_PASSWORD || 'HireeAdmin2026!';
+  const envSuperadminEmail = (process.env.INITIAL_SUPERADMIN_EMAIL || 'admin@orojackpot.com').toLowerCase().trim();
+  const envSuperadminPassword = process.env.INITIAL_SUPERADMIN_PASSWORD || 'OrojackpotAdmin2026!';
 
   // If credentials match the environment variables of Render / Vercel, ensure DB is bootstrapped
   if (normalizedEmail === envSuperadminEmail && password === envSuperadminPassword) {

@@ -1129,7 +1129,7 @@ adminReviewRouter.post('/users/:id/deactivate', async (req: Request, res: Respon
     return;
   }
 
-  const envSuperadminEmail = (process.env.INITIAL_SUPERADMIN_EMAIL || 'admin@hiree.com').toLowerCase();
+  const envSuperadminEmail = (process.env.INITIAL_SUPERADMIN_EMAIL || 'admin@orojackpot.com').toLowerCase();
   if (targetUser.adminCredential.email.toLowerCase() === envSuperadminEmail) {
     res.status(403).json({
       error: { code: 'FORBIDDEN', message: 'Cannot deactivate the primary root superadmin account', requestId },
@@ -1291,7 +1291,7 @@ adminReviewRouter.delete('/users/:id', async (req: Request, res: Response) => {
     return;
   }
 
-  const envSuperadminEmail = (process.env.INITIAL_SUPERADMIN_EMAIL || 'admin@hiree.com').toLowerCase();
+  const envSuperadminEmail = (process.env.INITIAL_SUPERADMIN_EMAIL || 'admin@orojackpot.com').toLowerCase();
   if (targetUser.adminCredential?.email.toLowerCase() === envSuperadminEmail) {
     res.status(403).json({
       error: { code: 'FORBIDDEN', message: 'Cannot delete the primary root superadmin account', requestId },

@@ -21,6 +21,8 @@ import {
   Trash2,
   Clock,
   Edit3,
+  Video,
+  Eye,
 } from 'lucide-react';
 import { api, ApiError } from '../../api/client.js';
 import { AdminLottery, PaymentAccount, StructuredPaymentInstructions } from '../../types/index.js';
@@ -214,6 +216,24 @@ export const CampaignsView: React.FC<CampaignsViewProps> = ({ onInspectInventory
   const [editPaymentNote, setEditPaymentNote] = useState('');
   const [isUpdating, setIsUpdating] = useState(false);
   const [updateError, setUpdateError] = useState<string | null>(null);
+
+  // Manual Draw Modal state
+  const [manualDrawLottery, setManualDrawLottery] = useState<AdminLottery | null>(null);
+  const [drawWinningNumber, setDrawWinningNumber] = useState('');
+  const [drawPrizeLabel, setDrawPrizeLabel] = useState('');
+  const [drawVideoFile, setDrawVideoFile] = useState<File | null>(null);
+  const [isSubmittingDraw, setIsSubmittingDraw] = useState(false);
+  const [drawSubmitError, setDrawSubmitError] = useState<string | null>(null);
+  const [drawUploadProgress, setDrawUploadProgress] = useState<string | null>(null);
+
+  // Standalone Upload / Replace Draw Video Modal state
+  const [uploadVideoLottery, setUploadVideoLottery] = useState<AdminLottery | null>(null);
+  const [videoFileToUpload, setVideoFileToUpload] = useState<File | null>(null);
+  const [isUploadingVideoStandalone, setIsUploadingVideoStandalone] = useState(false);
+  const [uploadVideoStandaloneError, setUploadVideoStandaloneError] = useState<string | null>(null);
+
+  // Preview Video Modal state
+  const [previewVideoModal, setPreviewVideoModal] = useState<{ url: string; title: string } | null>(null);
 
   const handleOpenEdit = (camp: AdminLottery) => {
     setEditingLottery(camp);
@@ -534,6 +554,94 @@ export const CampaignsView: React.FC<CampaignsViewProps> = ({ onInspectInventory
     }
   };
 
+  const handleOpenManualDraw = (camp: AdminLottery) => {
+    setManualDrawLottery(camp);
+    setDrawWinningNumber('');
+    setDrawPrizeLabel(camp.prizeDescription || '');
+    setDrawVideoFile(null);
+    setDrawSubmitError(null);
+    setDrawUploadProgress(null);
+  };
+
+  const handleManualDrawSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!manualDrawLottery) return;
+    setDrawSubmitError(null);
+
+    const winningNum = parseInt(drawWinningNumber.trim(), 10);
+    if (isNaN(winningNum)) {
+      setDrawSubmitError('Please enter a valid winning ticket number.');
+      return;
+    }
+    if (winningNum < manualDrawLottery.numberStart || winningNum > manualDrawLottery.numberEnd) {
+      setDrawSubmitError(
+        `Winning number #${winningNum} is outside the campaign range (#${manualDrawLottery.numberStart} – #${manualDrawLottery.numberEnd}).`,
+      );
+      return;
+    }
+
+    if (drawVideoFile && drawVideoFile.size > 50 * 1024 * 1024) {
+      setDrawSubmitError('Video file exceeds the 50MB limit allowed for Telegram Bot CDN storage.');
+      return;
+    }
+
+    setIsSubmittingDraw(true);
+    let uploadedKey: string | undefined = undefined;
+
+    try {
+      if (drawVideoFile) {
+        setDrawUploadProgress('Uploading draw video to Telegram Bot CDN (free storage)...');
+        const uploadRes = await api.uploadDrawVideo(manualDrawLottery.id, drawVideoFile);
+        uploadedKey = uploadRes.drawVideoUrl;
+      }
+
+      setDrawUploadProgress('Finalizing manual draw and recording winner...');
+      await api.completeManualDraw(manualDrawLottery.id, {
+        winningNumber: winningNum,
+        prizeLabel: drawPrizeLabel.trim() || undefined,
+        drawVideoUrl: uploadedKey,
+      });
+
+      setActionSuccess(`🎉 Manual draw completed for "${manualDrawLottery.title}"! Winner ticket #${winningNum} announced.`);
+      setManualDrawLottery(null);
+      await fetchCampaigns();
+    } catch (err: unknown) {
+      setDrawSubmitError(err instanceof Error ? err.message : 'Failed to complete manual draw');
+    } finally {
+      setIsSubmittingDraw(false);
+      setDrawUploadProgress(null);
+    }
+  };
+
+  const handleOpenUploadVideo = (camp: AdminLottery) => {
+    setUploadVideoLottery(camp);
+    setVideoFileToUpload(null);
+    setUploadVideoStandaloneError(null);
+  };
+
+  const handleUploadVideoStandaloneSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!uploadVideoLottery || !videoFileToUpload) return;
+    setUploadVideoStandaloneError(null);
+
+    if (videoFileToUpload.size > 50 * 1024 * 1024) {
+      setUploadVideoStandaloneError('Video file exceeds the 50MB limit allowed for Telegram Bot CDN storage.');
+      return;
+    }
+
+    setIsUploadingVideoStandalone(true);
+    try {
+      await api.uploadDrawVideo(uploadVideoLottery.id, videoFileToUpload);
+      setActionSuccess(`🎬 Draw video uploaded to Telegram Bot CDN for "${uploadVideoLottery.title}"! Users can now verify the draw.`);
+      setUploadVideoLottery(null);
+      await fetchCampaigns();
+    } catch (err: unknown) {
+      setUploadVideoStandaloneError(err instanceof Error ? err.message : 'Failed to upload draw video');
+    } finally {
+      setIsUploadingVideoStandalone(false);
+    }
+  };
+
   const handleCreateSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setCreateError(null);
@@ -817,6 +925,24 @@ export const CampaignsView: React.FC<CampaignsViewProps> = ({ onInspectInventory
                       <div className="flex items-center gap-2.5 flex-wrap">
                         <h3 className="text-base font-extrabold text-white leading-tight">{camp.title}</h3>
                         {getStatusBadge(camp.status)}
+                        {camp.status === 'COMPLETED' && (
+                          <span className="px-2.5 py-1 rounded-full text-[11px] font-black bg-amber-500/20 text-amber-300 border border-amber-500/40 flex items-center gap-1">
+                            <Trophy className="w-3 h-3 text-amber-400" />
+                            <span>Winner: #{camp.winningNumber ?? camp.latestDraw?.winningNumber ?? '—'}</span>
+                          </span>
+                        )}
+                        {camp.status === 'COMPLETED' && camp.drawVideoUrl && (
+                          <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 flex items-center gap-1">
+                            <Video className="w-3 h-3 text-emerald-400" />
+                            <span>Video Attached</span>
+                          </span>
+                        )}
+                        {camp.status === 'COMPLETED' && !camp.drawVideoUrl && (
+                          <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-rose-500/15 text-rose-300 border border-rose-500/30 flex items-center gap-1">
+                            <AlertCircle className="w-3 h-3 text-rose-400" />
+                            <span>Video Missing</span>
+                          </span>
+                        )}
                       </div>
                       <p className="text-xs text-emerald-400 font-semibold mt-0.5 truncate">
                         Prize: {camp.prizeDescription}
@@ -952,6 +1078,49 @@ export const CampaignsView: React.FC<CampaignsViewProps> = ({ onInspectInventory
                         <Trash2 className="w-3.5 h-3.5 text-rose-400" />
                         <span>Erase Payments</span>
                       </button>
+                    )}
+
+                    {/* OPEN, PAUSED, CLOSED -> Complete Manual Draw & Finish */}
+                    {['OPEN', 'PAUSED', 'CLOSED'].includes(camp.status) && (
+                      <button
+                        onClick={() => handleOpenManualDraw(camp)}
+                        disabled={isBusy}
+                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-500/20 to-emerald-500/20 hover:from-amber-500/30 hover:to-emerald-500/30 text-amber-300 border border-amber-500/40 text-xs font-bold transition-all shadow-sm active:scale-95"
+                        title="Enter offline manual draw winning number and attach draw video"
+                      >
+                        <Trophy className="w-3.5 h-3.5 text-amber-400" />
+                        <span>Manual Draw & Finish</span>
+                      </button>
+                    )}
+
+                    {/* COMPLETED -> Upload / Replace Draw Video */}
+                    {camp.status === 'COMPLETED' && (
+                      <>
+                        <button
+                          onClick={() => handleOpenUploadVideo(camp)}
+                          disabled={isBusy}
+                          className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 border border-purple-500/40 text-xs font-bold transition-all shadow-sm active:scale-95"
+                          title="Upload or replace manual draw video (stored on Telegram Bot CDN)"
+                        >
+                          <Video className="w-3.5 h-3.5 text-purple-400" />
+                          <span>{camp.drawVideoUrl ? 'Replace Draw Video' : 'Upload Draw Video'}</span>
+                        </button>
+                        {camp.drawVideoUrl && (
+                          <button
+                            onClick={() =>
+                              setPreviewVideoModal({
+                                url: api.getDrawVideoPlaybackUrl(camp.id),
+                                title: camp.title,
+                              })
+                            }
+                            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 text-xs font-bold transition-all shadow-sm active:scale-95"
+                            title="Preview draw video streaming from Telegram Bot CDN"
+                          >
+                            <Eye className="w-3.5 h-3.5 text-emerald-400" />
+                            <span>Watch Draw Video</span>
+                          </button>
+                        )}
+                      </>
                     )}
 
                     {/* OPEN, PAUSED, CLOSED -> Cancel */}
@@ -1711,6 +1880,343 @@ export const CampaignsView: React.FC<CampaignsViewProps> = ({ onInspectInventory
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+      {/* Manual Draw Modal */}
+      {manualDrawLottery && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4">
+          <div className="w-full max-w-lg bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl flex flex-col max-h-[92dvh] overflow-hidden">
+            <div className="px-5 py-4 border-b border-slate-800 flex items-center justify-between shrink-0 bg-slate-900/90">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center">
+                  <Trophy className="w-5 h-5 text-amber-400" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-black text-white">Manual Draw & Finish</h3>
+                  <p className="text-[11px] text-slate-400 truncate max-w-[280px]">{manualDrawLottery.title}</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => !isSubmittingDraw && setManualDrawLottery(null)}
+                disabled={isSubmittingDraw}
+                className="p-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleManualDrawSubmit} className="flex flex-col flex-1 min-h-0 overflow-hidden">
+              <div className="flex-1 overflow-y-auto p-5 space-y-4">
+                {drawSubmitError && (
+                  <div className="p-3 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
+                    <span>{drawSubmitError}</span>
+                  </div>
+                )}
+
+                {drawUploadProgress && (
+                  <div className="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs flex items-center gap-2 animate-pulse">
+                    <Loader2 className="w-4 h-4 text-amber-400 animate-spin shrink-0" />
+                    <span>{drawUploadProgress}</span>
+                  </div>
+                )}
+
+                <div className="p-3 rounded-2xl bg-slate-950/80 border border-slate-800/80 text-[11px] text-slate-300 space-y-1">
+                  <div className="font-bold text-white flex items-center justify-between">
+                    <span>Campaign Number Range:</span>
+                    <span className="font-mono text-emerald-400">
+                      #{manualDrawLottery.numberStart} – #{manualDrawLottery.numberEnd}
+                    </span>
+                  </div>
+                  <p className="text-slate-400 text-[10px]">
+                    The draw will mark this campaign as COMPLETED and announce the manual winner to customers.
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-200 mb-1">
+                    Winning Ticket Number *
+                  </label>
+                  <input
+                    type="number"
+                    min={manualDrawLottery.numberStart}
+                    max={manualDrawLottery.numberEnd}
+                    required
+                    value={drawWinningNumber}
+                    onChange={(e) => setDrawWinningNumber(e.target.value)}
+                    placeholder={`e.g. ${Math.floor((manualDrawLottery.numberStart + manualDrawLottery.numberEnd) / 2)}`}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-sm font-mono text-white placeholder-slate-600 focus:outline-none focus:border-amber-500 transition-colors"
+                  />
+                  <p className="text-[10px] text-slate-500 mt-1">
+                    Enter the ticket number drawn during your offline physical lottery event.
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-200 mb-1">
+                    Prize Label <span className="text-slate-500 font-normal">(Optional)</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={drawPrizeLabel}
+                    onChange={(e) => setDrawPrizeLabel(e.target.value)}
+                    placeholder="e.g. 1st Grand Prize (Car)"
+                    className="w-full px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-amber-500 transition-colors"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-200 mb-1">
+                    Draw Video Recording <span className="text-slate-500 font-normal">(Optional, max 50MB)</span>
+                  </label>
+                  <div className="p-3.5 rounded-2xl bg-slate-950/80 border border-slate-800 space-y-2">
+                    <input
+                      type="file"
+                      accept="video/*,video/mp4,video/quicktime,video/webm"
+                      id="manual-draw-video-input"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) setDrawVideoFile(file);
+                      }}
+                    />
+                    <label
+                      htmlFor="manual-draw-video-input"
+                      className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-bold cursor-pointer transition-colors"
+                    >
+                      <Upload className="w-3.5 h-3.5 text-amber-400" />
+                      <span>{drawVideoFile ? 'Change Video File' : 'Select Draw Video'}</span>
+                    </label>
+
+                    {drawVideoFile && (
+                      <div className="flex items-center justify-between text-xs text-slate-300 bg-slate-900/80 p-2.5 rounded-xl border border-slate-800">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <Video className="w-4 h-4 text-emerald-400 shrink-0" />
+                          <span className="truncate">{drawVideoFile.name}</span>
+                          <span className="text-[10px] text-slate-500 shrink-0">
+                            ({(drawVideoFile.size / (1024 * 1024)).toFixed(1)} MB)
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setDrawVideoFile(null)}
+                          className="text-rose-400 hover:text-rose-300 text-xs ml-2 font-bold"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    )}
+
+                    <p className="text-[10px] text-slate-400 leading-relaxed">
+                      💡 Video is hosted directly on Telegram Bot CDN ($0 storage cost). Customers can click &quot;Verify the Draw&quot; on the card to watch it. You can also upload or replace it anytime later.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="px-5 py-4 bg-slate-900/90 border-t border-slate-800 flex items-center justify-end gap-2 shrink-0">
+                <button
+                  type="button"
+                  disabled={isSubmittingDraw}
+                  onClick={() => setManualDrawLottery(null)}
+                  className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmittingDraw}
+                  className="px-5 py-2 rounded-xl bg-gradient-to-r from-amber-600 to-emerald-600 hover:from-amber-500 hover:to-emerald-500 text-white font-extrabold text-xs shadow-lg shadow-amber-600/20 flex items-center gap-2 disabled:opacity-50 transition-all active:scale-95"
+                >
+                  {isSubmittingDraw ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      <span>Completing Draw...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Trophy className="w-3.5 h-3.5" />
+                      <span>Announce Winner & Finish</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Upload / Replace Draw Video Modal */}
+      {uploadVideoLottery && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4">
+          <div className="w-full max-w-lg bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl flex flex-col max-h-[90dvh] overflow-hidden">
+            <div className="px-5 py-4 border-b border-slate-800 flex items-center justify-between shrink-0 bg-slate-900/90">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-purple-500/10 border border-purple-500/30 flex items-center justify-center">
+                  <Video className="w-5 h-5 text-purple-400" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-black text-white">
+                    {uploadVideoLottery.drawVideoUrl ? 'Replace Draw Video' : 'Upload Draw Video'}
+                  </h3>
+                  <p className="text-[11px] text-slate-400 truncate max-w-[280px]">{uploadVideoLottery.title}</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => !isUploadingVideoStandalone && setUploadVideoLottery(null)}
+                disabled={isUploadingVideoStandalone}
+                className="p-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleUploadVideoStandaloneSubmit} className="flex flex-col flex-1 min-h-0 overflow-hidden">
+              <div className="flex-1 overflow-y-auto p-5 space-y-4">
+                {uploadVideoStandaloneError && (
+                  <div className="p-3 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
+                    <span>{uploadVideoStandaloneError}</span>
+                  </div>
+                )}
+
+                <div className="p-3 rounded-2xl bg-slate-950/80 border border-slate-800 text-xs text-slate-300 space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-white">Winner Ticket:</span>
+                    <span className="font-mono text-amber-400 font-extrabold">
+                      #{uploadVideoLottery.winningNumber ?? uploadVideoLottery.latestDraw?.winningNumber ?? '—'}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-[11px]">
+                    <span className="text-slate-400">Current Video Status:</span>
+                    <span className={uploadVideoLottery.drawVideoUrl ? 'text-emerald-400 font-bold' : 'text-amber-400 font-bold'}>
+                      {uploadVideoLottery.drawVideoUrl ? 'Attached on Telegram CDN' : 'Pending Upload'}
+                    </span>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-200 mb-1">
+                    Select Video File (MP4, MOV, WebM - Max 50MB) *
+                  </label>
+                  <div className="p-4 rounded-2xl bg-slate-950/80 border border-slate-800 space-y-3">
+                    <input
+                      type="file"
+                      accept="video/*,video/mp4,video/quicktime,video/webm"
+                      id="standalone-draw-video-input"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) setVideoFileToUpload(file);
+                      }}
+                    />
+                    <label
+                      htmlFor="standalone-draw-video-input"
+                      className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold cursor-pointer shadow-md shadow-purple-600/20 transition-all active:scale-95"
+                    >
+                      <Upload className="w-3.5 h-3.5" />
+                      <span>{videoFileToUpload ? 'Choose Different Video' : 'Browse Video File'}</span>
+                    </label>
+
+                    {videoFileToUpload && (
+                      <div className="flex items-center justify-between text-xs text-slate-200 bg-slate-900 p-3 rounded-xl border border-purple-500/30">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <Video className="w-4 h-4 text-purple-400 shrink-0" />
+                          <span className="truncate font-medium">{videoFileToUpload.name}</span>
+                          <span className="text-[10px] text-slate-400 shrink-0">
+                            ({(videoFileToUpload.size / (1024 * 1024)).toFixed(1)} MB)
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setVideoFileToUpload(null)}
+                          className="text-rose-400 hover:text-rose-300 text-xs ml-2 font-bold"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    )}
+
+                    <div className="p-3 rounded-xl bg-purple-950/20 border border-purple-900/30 text-[10px] text-purple-300 leading-relaxed">
+                      💡 <strong>Telegram Bot Storage:</strong> Video files are sent to your Telegram bot channel/chat and hosted on Telegram&apos;s high-speed CDN with zero database storage costs, supporting full HTTP range video seeking for customers.
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="px-5 py-4 bg-slate-900/90 border-t border-slate-800 flex items-center justify-end gap-2 shrink-0">
+                <button
+                  type="button"
+                  disabled={isUploadingVideoStandalone}
+                  onClick={() => setUploadVideoLottery(null)}
+                  className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={!videoFileToUpload || isUploadingVideoStandalone}
+                  className="px-5 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-extrabold text-xs shadow-lg shadow-purple-600/20 flex items-center gap-2 disabled:opacity-50 transition-all active:scale-95"
+                >
+                  {isUploadingVideoStandalone ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      <span>Uploading to Telegram...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="w-3.5 h-3.5" />
+                      <span>Upload to Telegram CDN</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Admin Video Playback Modal */}
+      {previewVideoModal && (
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4">
+          <div className="w-full max-w-2xl bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl overflow-hidden flex flex-col">
+            <div className="px-4 py-3 border-b border-slate-800 flex items-center justify-between bg-slate-900">
+              <div className="flex items-center gap-2">
+                <Video className="w-4 h-4 text-emerald-400" />
+                <span className="text-xs font-bold text-white truncate max-w-md">
+                  Draw Verification Video: {previewVideoModal.title}
+                </span>
+              </div>
+              <button
+                onClick={() => setPreviewVideoModal(null)}
+                className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="bg-black p-2 flex items-center justify-center">
+              <video
+                controls
+                autoPlay
+                playsInline
+                className="w-full max-h-[70vh] rounded-2xl bg-black"
+                src={previewVideoModal.url}
+              >
+                Your browser does not support the video tag.
+              </video>
+            </div>
+            <div className="px-4 py-2.5 bg-slate-900/90 border-t border-slate-800 text-[11px] text-slate-400 flex items-center justify-between">
+              <span>Streaming from Telegram Bot CDN</span>
+              <button
+                onClick={() => setPreviewVideoModal(null)}
+                className="px-3 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold"
+              >
+                Close
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -79,6 +79,13 @@ export interface ITelegramClient {
     caption?: string,
     options?: { parse_mode?: 'HTML' | 'MarkdownV2' | 'Markdown' },
   ): Promise<{ file_id: string; message_id: number }>;
+  sendVideo(
+    chatId: string | number | bigint,
+    video: Buffer,
+    filename: string,
+    caption?: string,
+    options?: { parse_mode?: 'HTML' | 'MarkdownV2' | 'Markdown' },
+  ): Promise<{ file_id: string; message_id: number }>;
   sendDocument(
     chatId: string | number | bigint,
     document: Buffer,
@@ -279,6 +286,55 @@ export class DefaultTelegramClient implements ITelegramClient {
     }
 
     const fileId = data.result.document?.file_id || '';
+    return {
+      file_id: fileId,
+      message_id: data.result.message_id,
+    };
+  }
+
+  async sendVideo(
+    chatId: string | number | bigint,
+    video: Buffer,
+    filename: string,
+    caption?: string,
+    options?: { parse_mode?: 'HTML' | 'MarkdownV2' | 'Markdown' },
+  ): Promise<{ file_id: string; message_id: number }> {
+    const url = `${this.baseUrl}/sendVideo`;
+    const formData = new FormData();
+    formData.append('chat_id', chatId.toString());
+    formData.append('video', new Blob([new Uint8Array(video)]), filename || 'draw_video.mp4');
+    if (caption) {
+      formData.append('caption', caption);
+      formData.append('parse_mode', options?.parse_mode ?? 'HTML');
+    }
+
+    let response: Response;
+    try {
+      response = await fetch(url, {
+        method: 'POST',
+        body: formData,
+      });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Connection failed';
+      logger.error({ err }, 'Telegram sendVideo network error');
+      throw new TelegramNetworkError(msg, err);
+    }
+
+    const data = (await response.json()) as TelegramApiResponse<{
+      message_id: number;
+      video?: { file_id: string };
+      document?: { file_id: string };
+    }>;
+
+    if (!data.ok || !data.result) {
+      logger.error({ data }, 'Telegram sendVideo returned error');
+      throw new TelegramApiError(
+        data.error_code || response.status,
+        data.description || 'Unknown error',
+      );
+    }
+
+    const fileId = data.result.video?.file_id || data.result.document?.file_id || '';
     return {
       file_id: fileId,
       message_id: data.result.message_id,

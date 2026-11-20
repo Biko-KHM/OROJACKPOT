@@ -10,6 +10,7 @@ import { CampaignsView } from '../src/components/admin/CampaignsView.js';
 import { SettingsView } from '../src/components/admin/SettingsView.js';
 import { ForceChangePassword } from '../src/components/admin/ForceChangePassword.js';
 import { AdminUser, AdminOverview, AdminLottery, PaymentSubmissionReviewItem } from '../src/types/index.js';
+import { clearClientCache } from '../src/api/client.js';
 
 const mockSuperadmin: AdminUser = {
   id: 'admin-uuid-1',
@@ -83,6 +84,7 @@ describe('Step 10: Admin Dashboard & Verification Engine', () => {
     vi.resetAllMocks();
     sessionStorage.clear();
     localStorage.clear();
+    clearClientCache();
   });
 
   it('1. Direct admin login: credentials form authenticates directly and calls onLoginSuccess', async () => {
@@ -108,7 +110,7 @@ describe('Step 10: Admin Dashboard & Verification Engine', () => {
     render(<AdminLogin onLoginSuccess={loginMock} />);
 
     expect(screen.getByText('Operator & Admin Portal')).toBeInTheDocument();
-    expect(screen.getByText(/HIREE Lottery Management System/i)).toBeInTheDocument();
+    expect(screen.getByText(/OROJACKPOT Management System/i)).toBeInTheDocument();
 
     // Fill credentials
     const emailInput = screen.getByPlaceholderText('admin@lottery.et');
@@ -136,7 +138,7 @@ describe('Step 10: Admin Dashboard & Verification Engine', () => {
     render(<AdminLogin onLoginSuccess={vi.fn()} />);
 
     // Check saved accounts section
-    expect(screen.getByText(/Saved Accounts/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/Saved Accounts/i).length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText('operator@lottery.et')).toBeInTheDocument();
 
     const passwordInput = screen.getByPlaceholderText('••••••••••••') as HTMLInputElement;
@@ -523,7 +525,7 @@ describe('Step 10: Admin Dashboard & Verification Engine', () => {
     expect(screen.queryByRole('button', { name: /^Refunds$/i })).not.toBeInTheDocument();
 
     // 4. Click "Inventory"
-    fireEvent.click(screen.getByRole('button', { name: /Inventory/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^Inventory$/i }));
     await waitFor(() => {
       expect(screen.getByText('Number Inventory Inspector')).toBeInTheDocument();
     });
@@ -716,8 +718,8 @@ describe('Step 10: Admin Dashboard & Verification Engine', () => {
     });
 
     // 2. Verify Structured Table Headers
-    expect(screen.getByText('Reference & Customer')).toBeInTheDocument();
-    expect(screen.getByText('Contact & Info')).toBeInTheDocument();
+    expect(screen.getByText('Customer')).toBeInTheDocument();
+    expect(screen.getByText('Campaign')).toBeInTheDocument();
     expect(screen.getByText('Tickets & Total')).toBeInTheDocument();
     expect(screen.getByText('Status & Flags')).toBeInTheDocument();
     expect(screen.getByText('Submitted At')).toBeInTheDocument();

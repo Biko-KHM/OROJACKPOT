@@ -211,7 +211,7 @@ export async function submitPaymentEvidence(
         .sort((a, b) => a - b)
         .join(', ');
       const amountFormatted = (Number(reservation.totalAmountMinor) / 100).toFixed(2);
-      const campaignTitle = reservation.lottery?.title || 'HIREE Lottery';
+      const campaignTitle = reservation.lottery?.title || 'OROJACKPOT';
 
       const caption =
         `🧾 <b>${campaignTitle} • Payment Receipt Received!</b>\n\n` +

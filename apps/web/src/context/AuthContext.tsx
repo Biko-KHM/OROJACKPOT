@@ -52,7 +52,7 @@ declare global {
   }
 }
 
-const CACHED_USER_KEY = 'hiree_cached_user';
+const CACHED_USER_KEY = 'orojackpot_cached_user';
 
 const getInitialOptimisticUser = (): CustomerUser | null => {
   if (typeof window === 'undefined') return null;

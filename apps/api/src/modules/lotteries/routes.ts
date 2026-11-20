@@ -17,8 +17,11 @@ import {
   getLotteries,
   getLotteryById,
   getLotteryNumbersSummary,
+  completeManualDraw,
+  updateLotteryDrawVideo,
   LotteryError,
 } from './service.js';
+import { uploadDrawVideoToTelegram, streamDrawVideo } from './videoStorage.js';
 import { authenticateAdmin, authenticateCustomer } from '../auth/middleware.js';
 import { createReservationHandler } from '../reservations/routes.js';
 import { reservationsRateLimiter } from '../security/rateLimiter.js';
@@ -81,6 +84,22 @@ lotteriesRouter.get('/:id', async (req: Request, res: Response) => {
     const message = err instanceof Error ? err.message : 'Internal error';
     logger.error({ err, requestId, lotteryId }, 'Error getting lottery by ID');
     res.status(500).json({ error: { code: 'INTERNAL_ERROR', message, requestId } });
+  }
+});
+
+// GET /lotteries/:id/draw-video (Public video streaming endpoint for Mini App / web)
+lotteriesRouter.get('/:id/draw-video', async (req: Request, res: Response) => {
+  const lotteryId = req.params.id as string;
+  try {
+    const lottery = await getLotteryById(lotteryId);
+    if (!lottery || !lottery.drawVideoUrl) {
+      res.status(404).json({ error: { code: 'NO_DRAW_VIDEO', message: 'No draw video recorded for this campaign' } });
+      return;
+    }
+    await streamDrawVideo(lottery.drawVideoUrl, req, res);
+  } catch (err) {
+    logger.error({ err, lotteryId }, 'Error streaming draw video');
+    res.status(500).json({ error: { code: 'STREAM_ERROR', message: 'Failed to stream draw video' } });
   }
 });
 
@@ -552,4 +571,105 @@ adminLotteriesRouter.delete('/image', async (req: Request, res: Response) => {
     storagePathOrUrl,
     requestId,
   });
+});
+
+// Binary parser for draw video uploads (max 50MB per Telegram API)
+const videoRawParser = express.raw({
+  type: (req: any) => !req.headers['content-type']?.includes('application/json'),
+  limit: '50mb',
+});
+
+// POST /admin/lotteries/:id/manual-draw
+// Superadmin / Admin records a manual offline draw result and announces the winner
+adminLotteriesRouter.post('/:id/manual-draw', async (req: Request, res: Response) => {
+  const requestId = req.headers['x-request-id'] as string;
+  const lotteryId = req.params.id as string;
+  const admin = req.admin!;
+  const winningNumber = Number(req.body?.winningNumber);
+  const prizeLabel = req.body?.prizeLabel as string | undefined;
+  const drawVideoUrl = req.body?.drawVideoUrl as string | undefined;
+
+  if (isNaN(winningNumber)) {
+    res.status(400).json({
+      error: { code: 'INVALID_WINNING_NUMBER', message: 'winningNumber is required and must be a number', requestId },
+    });
+    return;
+  }
+
+  try {
+    const result = await completeManualDraw({
+      lotteryId,
+      adminUserId: admin.id,
+      winningNumber,
+      prizeLabel,
+      drawVideoUrl,
+      requestId,
+    });
+    res.status(200).json({ success: true, ...result, requestId });
+  } catch (err) {
+    if (err instanceof LotteryError) {
+      res.status(err.statusCode).json({ error: { code: err.code, message: err.message, requestId } });
+      return;
+    }
+    const message = err instanceof Error ? err.message : 'Failed to complete manual draw';
+    logger.error({ err, lotteryId, requestId }, 'Manual draw completion error');
+    res.status(500).json({ error: { code: 'INTERNAL_ERROR', message, requestId } });
+  }
+});
+
+// POST /admin/lotteries/:id/draw-video
+// Uploads manual draw video directly to Telegram Cloud CDN (or local disk fallback) and associates with lottery
+adminLotteriesRouter.post('/:id/draw-video', videoRawParser, async (req: Request, res: Response) => {
+  const requestId = req.headers['x-request-id'] as string;
+  const lotteryId = req.params.id as string;
+  const admin = req.admin!;
+
+  let buffer: Buffer;
+  let filename = 'draw_video.mp4';
+
+  if (Buffer.isBuffer(req.body) && req.body.length > 0) {
+    buffer = req.body;
+    const queryFilename = (req.query.filename as string) || (req.headers['x-filename'] as string) || '';
+    if (queryFilename) {
+      try {
+        filename = decodeURIComponent(queryFilename);
+      } catch {
+        filename = queryFilename;
+      }
+    }
+  } else if (req.body?.dataUrl && typeof req.body.dataUrl === 'string') {
+    const matches = req.body.dataUrl.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+    if (!matches || !matches[2]) {
+      res.status(400).json({ error: { code: 'INVALID_DATA_URL', message: 'Invalid base64 dataUrl', requestId } });
+      return;
+    }
+    buffer = Buffer.from(matches[2], 'base64');
+    filename = req.body.filename || 'draw_video.mp4';
+  } else {
+    res.status(400).json({ error: { code: 'NO_VIDEO_DATA', message: 'Video binary body or dataUrl is required', requestId } });
+    return;
+  }
+
+  try {
+    const lottery = await getLotteryById(lotteryId);
+    if (!lottery) {
+      res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Campaign not found', requestId } });
+      return;
+    }
+
+    const storageKey = await uploadDrawVideoToTelegram(buffer, filename, lottery.title);
+    const updated = await updateLotteryDrawVideo(lotteryId, storageKey, admin.id);
+
+    res.status(200).json({
+      success: true,
+      drawVideoUrl: storageKey,
+      videoPlaybackUrl: `/lotteries/${lotteryId}/draw-video`,
+      lottery: updated,
+      requestId,
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Failed to upload draw video';
+    logger.error({ err, lotteryId, requestId }, 'Draw video upload error');
+    res.status(500).json({ error: { code: 'UPLOAD_FAILED', message, requestId } });
+  }
 });

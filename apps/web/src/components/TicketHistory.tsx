@@ -6,7 +6,7 @@ import { useLanguage } from '../context/LanguageContext.js';
 import { CustomLoader } from './CustomLoader.js';
 import { triggerHaptic } from '../utils/haptics.js';
 
-const CACHED_TICKETS_KEY = 'hiree_cached_tickets';
+const CACHED_TICKETS_KEY = 'orojackpot_cached_tickets';
 
 const getInitialCachedTickets = (): ReservationDetails[] => {
   if (typeof window === 'undefined') return [];

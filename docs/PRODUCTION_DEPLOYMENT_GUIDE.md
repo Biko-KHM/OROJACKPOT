@@ -1,7 +1,7 @@
-# HIREE Lottery: Production Deployment Architecture Guide
+# OROJACKPOT: Production Deployment Architecture Guide
 **Mini App on Vercel • Backend on Render • PostgreSQL on Supabase**
 
-This document provides complete, production-grade instructions to deploy the entire HIREE Telegram Lottery platform with zero mock data, high performance, and bank-grade cryptographic security.
+This document provides complete, production-grade instructions to deploy the entire OROJACKPOT Telegram Lottery platform with zero mock data, high performance, and bank-grade cryptographic security.
 
 ---
 
@@ -79,7 +79,7 @@ This document provides complete, production-grade instructions to deploy the ent
 This repository includes a `render.yaml` specification at the root:
 1. Log in to [render.com](https://render.com).
 2. Click **New +** → **Blueprint**.
-3. Connect your GitHub repository. Render will automatically detect `render.yaml` and configure the Web Service (`hiree-lottery-api`).
+3. Connect your GitHub repository. Render will automatically detect `render.yaml` and configure the Web Service (`orojackpot-api`).
 4. Supply the secret environment variables in the Render dashboard:
    - `DATABASE_URL`: Your Supabase pooler connection string.
    - `DIRECT_URL`: Your Supabase port 5432 connection string.
@@ -96,12 +96,12 @@ This repository includes a `render.yaml` specification at the root:
 * **Health Check Path**: `/health`
 
 ### Configure Telegram Webhook:
-Once your Render API is deployed (e.g. `https://hiree-lottery-api.onrender.com`), register the webhook with Telegram:
+Once your Render API is deployed (e.g. `https://orojackpot-api.onrender.com`), register the webhook with Telegram:
 ```bash
 curl -X POST "https://api.telegram.org/bot<TELEGRAM_BOT_TOKEN>/setWebhook" \
   -H "Content-Type: application/json" \
   -d '{
-    "url": "https://hiree-lottery-api.onrender.com/webhooks/telegram",
+    "url": "https://orojackpot-api.onrender.com/webhooks/telegram",
     "secret_token": "<TELEGRAM_WEBHOOK_SECRET>"
   }'
 ```
@@ -119,8 +119,8 @@ curl -X POST "https://api.telegram.org/bot<TELEGRAM_BOT_TOKEN>/setWebhook" \
    - **Output Directory**: `dist`
 4. Set **Environment Variables**:
    ```env
-   VITE_API_URL=https://hiree-lottery-api.onrender.com
-   VITE_TELEGRAM_BOT_USERNAME=HireeLotteryBot
+   VITE_API_URL=https://orojackpot-api.onrender.com
+   VITE_TELEGRAM_BOT_USERNAME=OrojackpotBot
    ```
 5. Click **Deploy**. Vercel will build the frontend with production minification, gzip assets, and SPA rewrite rules.
 
@@ -133,8 +133,8 @@ Open Telegram and chat with [@BotFather](https://t.me/BotFather):
 1. **Configure Web App URL**:
    * Send `/newapp`
    * Select your bot.
-   * Enter App Title: `HIREE National Lottery`
-   * Enter App Description: `Official Provably Fair Ethiopian Lottery`
+   * Enter App Title: `OROJACKPOT`
+   * Enter App Description: `Official Ethiopian Telegram Lottery`
    * Upload an icon (640x360 px)
    * Enter Web App URL: `https://your-mini-app.vercel.app`
    * Enter Short Name: `app` (this enables links like `t.me/YourBot/app`)

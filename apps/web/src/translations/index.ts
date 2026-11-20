@@ -3,7 +3,7 @@ export type Language = 'en' | 'om' | 'am';
 export const translations = {
   en: {
     // Header & Nav
-    appTitle: 'HIREE Lottery',
+    appTitle: 'OROJACKPOT',
     appMotto: 'Your chance. Your destiny.',
     campaigns: 'Campaigns',
     myTickets: 'My Tickets',
@@ -125,7 +125,7 @@ export const translations = {
   },
   om: {
     // Header & Nav
-    appTitle: 'HIREE Lootorii',
+    appTitle: 'OROJACKPOT Lootorii',
     appMotto: 'Your chance. Your destiny.',
     campaigns: 'Lootoriiwwan',
     myTickets: 'Tikkeettii Kiyya',
@@ -247,7 +247,7 @@ export const translations = {
   },
   am: {
     // Header & Nav
-    appTitle: 'HIREE ሎተሪ',
+    appTitle: 'OROJACKPOT ሎተሪ',
     appMotto: 'Your chance. Your destiny.',
     campaigns: 'ሎተሪዎች',
     myTickets: 'ትኬቶቼ',

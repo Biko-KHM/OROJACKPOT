@@ -104,6 +104,15 @@ class MockTelegramClient implements ITelegramClient {
     };
   }
 
+  async sendVideo(chatId: string | number | bigint, _video: Buffer, _filename: string, caption?: string) {
+    this.messageCounter++;
+    this.sentMessages.push({ chatId: chatId.toString(), text: caption || '[video]' });
+    return {
+      file_id: `mock_tg_file_${this.messageCounter}`,
+      message_id: this.messageCounter,
+    };
+  }
+
   async sendDocument(chatId: string | number | bigint, _document: Buffer, _filename: string, caption?: string) {
     this.messageCounter++;
     this.sentMessages.push({ chatId: chatId.toString(), text: caption || '[document]' });
@@ -323,7 +332,7 @@ describe('Step 8: Outbox, Bot, and Channel Integration Tests', () => {
         },
       });
     expect(mockTelegram.sentMessages.length).toBe(1);
-    expect(mockTelegram.sentMessages[0]?.text).toContain('Welcome to HIREE Lottery');
+    expect(mockTelegram.sentMessages[0]?.text).toContain('Welcome to OROJACKPOT');
 
     // Test /help
     mockTelegram.reset();

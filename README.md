@@ -1,6 +1,6 @@
-# HIREE — Telegram Lottery Mini App & Provably Fair Verification Engine
+# OROJACKPOT — Telegram Lottery Mini App & Provably Fair Verification Engine
 
-[![CI](https://github.com/Biko-KHM/Mini-Tg-App/actions/workflows/ci.yml/badge.svg)](https://github.com/Biko-KHM/Mini-Tg-App/actions/workflows/ci.yml)
+[![CI](https://github.com/Biko-KHM/OROJACKPOT/actions/workflows/ci.yml/badge.svg)](https://github.com/Biko-KHM/OROJACKPOT/actions/workflows/ci.yml)
 [![Node.js Version](https://img.shields.io/badge/Node.js-v20%20%7C%20v22-green)](https://nodejs.org/)
 [![License](https://img.shields.io/badge/License-Proprietary-blue.svg)](LICENSE)
 [![Frontend](https://img.shields.io/badge/Frontend-Vercel-black?logo=vercel)](https://vercel.com)

@@ -770,6 +770,53 @@ export const api = {
     );
   },
 
+  async completeManualDraw(
+    lotteryId: string,
+    payload: { winningNumber: number; prizeLabel?: string; drawVideoUrl?: string },
+  ): Promise<{ success: boolean; lottery: AdminLottery; draw: any }> {
+    return request<{ success: boolean; lottery: AdminLottery; draw: any }>(
+      `/admin/lotteries/${lotteryId}/manual-draw`,
+      {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      },
+    );
+  },
+
+  async uploadDrawVideo(
+    lotteryId: string,
+    videoFile: File,
+  ): Promise<{ success: boolean; drawVideoUrl: string; videoPlaybackUrl: string; lottery: AdminLottery }> {
+    const query = new URLSearchParams({ filename: videoFile.name });
+    const endpoint = `/admin/lotteries/${lotteryId}/draw-video?${query.toString()}`;
+    const url = resolveUrl(endpoint);
+    const headers: Record<string, string> = {
+      'Content-Type': videoFile.type || 'video/mp4',
+      'x-filename': encodeURIComponent(videoFile.name),
+    };
+    const adminToken = localStorage.getItem('tg_admin_token') || sessionStorage.getItem('tg_admin_token');
+    if (adminToken) {
+      headers['Authorization'] = `Bearer ${adminToken}`;
+    }
+
+    const res = await fetch(url, {
+      method: 'POST',
+      headers,
+      body: videoFile,
+    });
+
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData?.error?.message || `Video upload failed with status ${res.status}`);
+    }
+
+    return res.json();
+  },
+
+  getDrawVideoPlaybackUrl(lotteryId: string): string {
+    return resolveUrl(`/lotteries/${lotteryId}/draw-video`);
+  },
+
   // 15. Number Inventory
   async getLotteryInventory(
     lotteryId: string,

@@ -367,7 +367,7 @@ const MainApp: React.FC = () => {
         fallback={
           <CustomLoader
             message="Loading Operator Portal"
-            subtitle="HIREE Management System"
+            subtitle="OROJACKPOT Management System"
           />
         }
       >
@@ -421,7 +421,7 @@ const MainApp: React.FC = () => {
     return (
       <CustomLoader
         message="Getting things ready"
-        subtitle="HIREE Lottery • Your chance. Your destiny."
+        subtitle="OROJACKPOT • Your chance. Your destiny."
       />
     );
   }
@@ -477,7 +477,7 @@ const MainApp: React.FC = () => {
             </p>
             <div className="space-y-2.5 pt-2">
               <a
-                href={`https://t.me/${(typeof import.meta !== 'undefined' && import.meta.env?.VITE_TELEGRAM_BOT_USERNAME) || 'HireeLotteryBot'}/app`}
+                href={`https://t.me/${(typeof import.meta !== 'undefined' && import.meta.env?.VITE_TELEGRAM_BOT_USERNAME) || 'OrojackpotBot'}/app`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="fulus-btn-primary w-full py-3.5 rounded-xl font-bold text-xs sm:text-sm active:scale-95 shadow-xl flex items-center justify-center gap-2"
@@ -497,7 +497,7 @@ const MainApp: React.FC = () => {
           </div>
         </div>
         <div className="p-4 text-center text-[10px] text-fulus-dim font-medium pb-safe">
-          HIREE Lottery • Your chance. Your destiny.
+          OROJACKPOT • Your chance. Your destiny.
         </div>
       </div>
     );

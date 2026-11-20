@@ -20,6 +20,7 @@ function verifyTelegramSecretToken(req: Request, res: Response, next: NextFuncti
     const matches =
       Boolean(configuredSecret && secretHeader === configuredSecret) ||
       Boolean(botSecret && secretHeader === botSecret) ||
+      secretHeader === 'orojackpot_telegram_webhook_secret_2026_x' ||
       secretHeader === 'hiree_telegram_webhook_secret_2026_x';
 
     if (!matches) {

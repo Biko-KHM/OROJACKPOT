@@ -700,7 +700,7 @@ export const CustomersView: React.FC<CustomersViewProps> = ({ onNavigateToAudit 
                     </div>
                   </div>
                   <div className="p-3 rounded-2xl bg-slate-950/70 border border-slate-800">
-                    <span className="text-[10px] uppercase font-bold text-slate-400">Joined HIREE</span>
+                    <span className="text-[10px] uppercase font-bold text-slate-400">Joined OROJACKPOT</span>
                     <div className="text-xs font-bold text-slate-300 mt-1">
                       {new Date(customerDetail.createdAt).toLocaleDateString()}
                     </div>

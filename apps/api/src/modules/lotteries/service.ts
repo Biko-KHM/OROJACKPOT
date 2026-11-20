@@ -9,6 +9,9 @@ import {
 
 import { cache, CACHE_KEYS } from '../cache/index.js';
 import { deleteCampaignImageFromSupabase } from './storage.js';
+import { getTelegramClient } from '../telegram/client.js';
+import { config } from '../../config/index.js';
+import { logger } from '../../logger/index.js';
 
 export class LotteryError extends Error {
   constructor(
@@ -17,6 +20,8 @@ export class LotteryError extends Error {
       | 'INVALID_STATE_TRANSITION'
       | 'INVALID_RANGE'
       | 'CANNOT_SHRINK_HELD_NUMBERS'
+      | 'INVALID_STATE'
+      | 'INVALID_WINNING_NUMBER'
       | 'CONFLICT',
     message: string,
     public readonly statusCode: number = 409,
@@ -814,6 +819,143 @@ export async function getLotteryNumbersSummary(lotteryId: string): Promise<Lotte
   return summaryResult;
 }
 
+// 12. Complete Manual Offline Draw (Superadmin / Admin finishes campaign with manual winning number & draw video)
+export async function completeManualDraw({
+  lotteryId,
+  adminUserId,
+  winningNumber,
+  prizeLabel,
+  drawVideoUrl,
+  requestId,
+}: {
+  lotteryId: string;
+  adminUserId: string;
+  winningNumber: number;
+  prizeLabel?: string;
+  drawVideoUrl?: string;
+  requestId?: string;
+}) {
+  const lottery = await prisma.lottery.findUnique({ where: { id: lotteryId } });
+  if (!lottery) {
+    throw new LotteryError('NOT_FOUND', 'Campaign not found.', 404);
+  }
+
+  if (lottery.status === LotteryStatus.ARCHIVED || lottery.status === LotteryStatus.CANCELLED) {
+    throw new LotteryError('INVALID_STATE', `Cannot complete a draw on a ${lottery.status} campaign.`, 400);
+  }
+
+  if (winningNumber < lottery.numberStart || winningNumber > lottery.numberEnd) {
+    throw new LotteryError(
+      'INVALID_WINNING_NUMBER',
+      `Winning number #${winningNumber} is outside the campaign range (${lottery.numberStart} - ${lottery.numberEnd}).`,
+      400,
+    );
+  }
+
+  const label = (prizeLabel || lottery.prizeDescription || 'Grand Prize').trim();
+
+  // Insert immutable Draw record
+  const draw = await prisma.draw.create({
+    data: {
+      lotteryId,
+      prizeLabel: label,
+      drawOrder: 1,
+      eligibleCount: lottery.numberEnd - lottery.numberStart + 1,
+      eligibleSetSha256: 'manual-offline-draw-v1.0',
+      randomSeed: 'manual-offline-draw',
+      winningNumber,
+      winningIndex: Math.max(0, winningNumber - lottery.numberStart),
+      algorithmVersion: 'MANUAL-DRAW-v1.0',
+      runBy: adminUserId,
+      verificationProof: {
+        type: 'MANUAL_OFFLINE_DRAW',
+        winningNumber,
+        completedAt: new Date().toISOString(),
+        hasDrawVideo: Boolean(drawVideoUrl),
+      },
+    },
+  });
+
+  // Mark lottery COMPLETED and record drawVideoUrl
+  const updatedLottery = await prisma.lottery.update({
+    where: { id: lotteryId },
+    data: {
+      status: LotteryStatus.COMPLETED,
+      ...(drawVideoUrl ? { drawVideoUrl } : {}),
+    },
+  });
+
+  // Invalidate caches
+  await cache.del(CACHE_KEYS.LOTTERY(lotteryId));
+  await cache.del(CACHE_KEYS.OPEN_LOTTERIES);
+  await cache.del(CACHE_KEYS.ALL_LOTTERIES);
+  await cache.del(CACHE_KEYS.NUMBERS_SUMMARY(lotteryId));
+
+  // Write audit log
+  await prisma.auditLog.create({
+    data: {
+      actorUserId: adminUserId,
+      action: 'LOTTERY_MANUAL_DRAW_COMPLETED',
+      entityType: 'LOTTERY',
+      entityId: lotteryId,
+      details: {
+        winningNumber,
+        prizeLabel: label,
+        drawId: draw.id,
+        drawVideoUrl: drawVideoUrl || null,
+        requestId,
+      },
+    },
+  });
+
+  // Broadcast winner to Telegram channel if configured
+  try {
+    const channelId = config.TELEGRAM_CHANNEL_ID;
+    if (channelId && config.TELEGRAM_BOT_TOKEN && !config.TELEGRAM_BOT_TOKEN.includes('dummy')) {
+      const client = getTelegramClient();
+      const text =
+        `🎉 <b>LOTTERY WINNER ANNOUNCED!</b> 🎉\n\n` +
+        `🏆 Campaign: <b>${lottery.title}</b>\n` +
+        `🎁 Prize: <b>${label}</b>\n` +
+        `🎟 Lucky Winning Number: <b>#${winningNumber}</b>\n\n` +
+        `Congratulations to the lucky ticket holder!\nOpen the Mini App to verify your tickets.`;
+      await client.sendMessage(channelId, text);
+    }
+  } catch (err) {
+    logger.warn({ err }, 'Could not broadcast winner to Telegram channel');
+  }
+
+  return {
+    lottery: serializeLottery(updatedLottery),
+    draw,
+  };
+}
+
+// 13. Update Lottery Draw Video (Attach or replace draw video on completed campaign)
+export async function updateLotteryDrawVideo(lotteryId: string, drawVideoUrl: string, adminUserId: string) {
+  const lottery = await prisma.lottery.findUnique({ where: { id: lotteryId } });
+  if (!lottery) {
+    throw new LotteryError('NOT_FOUND', 'Campaign not found.', 404);
+  }
+  const updated = await prisma.lottery.update({
+    where: { id: lotteryId },
+    data: { drawVideoUrl },
+  });
+  await cache.del(CACHE_KEYS.LOTTERY(lotteryId));
+  await cache.del(CACHE_KEYS.OPEN_LOTTERIES);
+  await cache.del(CACHE_KEYS.ALL_LOTTERIES);
+  await prisma.auditLog.create({
+    data: {
+      actorUserId: adminUserId,
+      action: 'LOTTERY_DRAW_VIDEO_UPDATED',
+      entityType: 'LOTTERY',
+      entityId: lotteryId,
+      details: { drawVideoUrl },
+    },
+  });
+  return serializeLottery(updated);
+}
+
 // Helper: Serializes BigInt values into strings for JSON response
 function serializeLottery(lottery: {
   id: string;
@@ -822,6 +964,7 @@ function serializeLottery(lottery: {
   description: string | null;
   prizeDescription: string;
   imageUrl?: string | null;
+  drawVideoUrl?: string | null;
   status: LotteryStatus;
   currency: string;
   ticketPriceMinor: bigint;

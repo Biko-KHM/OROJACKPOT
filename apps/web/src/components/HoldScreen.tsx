@@ -30,14 +30,14 @@ export function parsePaymentInstructions(raw?: string | null): StructuredPayment
       type: 'bank',
       title: 'Commercial Bank of Ethiopia (CBE)',
       accountNumber: '1000 0000 0000 0',
-      accountName: 'HIREE Official Bank Account',
+      accountName: 'OROJACKPOT Official Bank Account',
     },
     {
       id: 'acc-telebirr',
       type: 'telebirr',
       title: 'Telebirr SuperApp Transfer',
       accountNumber: '0900 00 00 00',
-      accountName: 'HIREE Official Telebirr',
+      accountName: 'OROJACKPOT Official Telebirr',
     },
   ];
 

@@ -738,6 +738,14 @@ export const PaymentReviewsView: React.FC = () => {
                           <span className="text-slate-500 text-[9.5px] font-mono">
                             TG: {sub.reservation.customerTelegramId}
                           </span>
+                          <span className="text-slate-400 text-[9.5px] font-mono">
+                            {sub.reservation.publicReference}
+                          </span>
+                          {sub.paymentReference && (
+                            <span className="text-amber-400/90 text-[9.5px] font-mono">
+                              {sub.paymentReference}
+                            </span>
+                          )}
                         </div>
                       </div>
                     </td>

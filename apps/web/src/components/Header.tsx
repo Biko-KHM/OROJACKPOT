@@ -37,7 +37,7 @@ export const Header: React.FC<HeaderProps> = ({ currentTab, onSelectTab, onOpenA
           <div className="relative w-8 h-8 sm:w-9 sm:h-9 rounded-xl overflow-hidden p-0.5 bg-gradient-to-tr from-[#00d26a]/50 via-amber-400/30 to-[#00d26a]/40 shadow-md shadow-[#00d26a]/25 shrink-0">
             <img
               src="/logo.png"
-              alt="HIREE"
+              alt="OROJACKPOT"
               className="w-full h-full object-cover rounded-[10px]"
             />
           </div>

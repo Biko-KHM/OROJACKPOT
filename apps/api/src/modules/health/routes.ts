@@ -6,7 +6,7 @@ export const healthRouter = Router();
 healthRouter.get('/', (_req: Request, res: Response) => {
   res.status(200).json({
     status: 'ok',
-    service: 'hiree-api',
+    service: 'orojackpot-api',
     uptime: Math.floor(process.uptime()),
     timestamp: new Date().toISOString(),
   });

@@ -121,7 +121,7 @@ export async function handleStartCommand(chatId: number | string | bigint): Prom
   const miniAppUrl = getCleanMiniAppUrl();
 
   const welcomeText =
-    `👋 <b>Welcome to HIREE Lottery!</b>\n` +
+    `👋 <b>Welcome to OROJACKPOT!</b>\n` +
     `<i>Your chance. Your destiny.</i>\n\n` +
     `Baga nagaan dhuftan! Official verifiable digital lottery platform.\n\n` +
     `• Select your lucky numbers (up to 20 per purchase)\n` +
@@ -135,7 +135,7 @@ export async function handleStartCommand(chatId: number | string | bigint): Prom
       inline_keyboard: [
         [
           {
-            text: '🎟 Open HIREE Lottery App',
+            text: '🎟 Open OROJACKPOT App',
             web_app: { url: miniAppUrl },
           },
         ],
@@ -320,20 +320,20 @@ export async function handleHelpCommand(chatId: number | string | bigint): Promi
   const miniAppUrl = getCleanMiniAppUrl();
 
   const helpText =
-    `ℹ️ <b>How to Play HIREE Lottery:</b>\n\n` +
+    `ℹ️ <b>How to Play OROJACKPOT:</b>\n\n` +
     `1️⃣ <b>Select Numbers:</b> Open the Mini App and pick up to 20 numbers from the transparent grid.\n` +
     `2️⃣ <b>Hold & Transfer:</b> Once held, you have 10 minutes to transfer the exact amount via Telebirr or Commercial Bank of Ethiopia (CBE).\n` +
     `3️⃣ <b>Upload Evidence:</b> Submit your transfer screenshot directly in the app or send the receipt here in chat.\n` +
     `4️⃣ <b>Admin Verification:</b> Our team verifies your transaction against official bank records.\n` +
     `5️⃣ <b>Cryptographic Draw:</b> Winning numbers are generated with transparent SHA-256 commit-reveal entropy.\n\n` +
-    `💬 <i>Need assistance?</i> Contact official support: @hireesupport`;
+    `💬 <i>Need assistance?</i> Contact official support: @orojackpotsupport`;
 
   await client.sendMessage(chatId, helpText, {
     reply_markup: {
       inline_keyboard: [
         [
           {
-            text: '🎟 Open HIREE Lottery App',
+            text: '🎟 Open OROJACKPOT App',
             web_app: { url: miniAppUrl },
           },
         ],

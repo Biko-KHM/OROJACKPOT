@@ -163,7 +163,7 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({
           <div className="relative w-20 h-20 mx-auto mb-4 rounded-3xl p-1 bg-gradient-to-tr from-[#00d26a]/40 via-amber-400/30 to-[#00d26a]/40 shadow-xl shadow-[#00d26a]/20">
             <img
               src="/logo.png"
-              alt="HIREE"
+              alt="OROJACKPOT"
               className="w-full h-full object-cover rounded-[22px] shadow-inner"
             />
           </div>
@@ -171,7 +171,7 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({
             Operator & Admin Portal
           </h1>
           <p className="text-xs text-fulus-muted mt-1">
-            HIREE Lottery Management System • Secure Access
+            OROJACKPOT Management System • Secure Access
           </p>
         </div>
 

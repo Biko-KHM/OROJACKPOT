@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: hiree-lottery-api
+    name: orojackpot-api
     runtime: node
     plan: starter
     region: frankfurt

@@ -211,12 +211,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             <div className="flex items-center gap-2.5">
               {/* Luxury Logo Badge */}
               <div className="relative w-9 h-9 rounded-2xl overflow-hidden p-0.5 bg-gradient-to-tr from-[#00d26a]/50 via-amber-400/30 to-[#00d26a]/40 shadow-md shadow-[#00d26a]/15 shrink-0">
-                <img src="/logo.png" alt="HIREE" className="w-full h-full object-cover rounded-[12px]" />
+                <img src="/logo.png" alt="OROJACKPOT" className="w-full h-full object-cover rounded-[12px]" />
               </div>
 
               <div>
                 <h1 className="text-sm font-extrabold font-display tracking-tight text-white flex items-center gap-1.5 leading-none">
-                  <span>HIREE Lottery</span>
+                  <span>OROJACKPOT</span>
                   <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-[#0c251b] text-[#00d26a] font-bold border border-[#123c2a]">
                     Portal
                   </span>

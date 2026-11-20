@@ -13,6 +13,7 @@ import {
   Megaphone,
   PartyPopper,
   Lock,
+  Video,
 } from 'lucide-react';
 import { CampaignSummary } from '../types/index.js';
 import { api } from '../api/client.js';
@@ -54,6 +55,7 @@ export const CampaignList: React.FC<CampaignListProps> = ({ onSelectCampaign }) 
   const [selectedComingSoon, setSelectedComingSoon] = useState<CampaignSummary | null>(null);
   const [confettiBurstKeys, setConfettiBurstKeys] = useState<Record<string, number>>({});
   const [myWinningNumbers, setMyWinningNumbers] = useState<Set<number>>(new Set());
+  const [verifyDrawCampaign, setVerifyDrawCampaign] = useState<CampaignSummary | null>(null);
 
   const fetchCampaigns = async (silent = false) => {
     if (!silent && campaigns.length === 0) {
@@ -359,13 +361,18 @@ export const CampaignList: React.FC<CampaignListProps> = ({ onSelectCampaign }) 
                       <span>{t('throwConfetti')}</span>
                     </button>
 
-                    <div
-                      className="py-2 px-3.5 rounded-xl bg-[#0c251b] border border-[#123c2a] text-[#00d26a] text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm select-none cursor-default"
-                      title="100% Trusted Cryptographic Draw"
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setVerifyDrawCampaign(camp);
+                      }}
+                      className="py-2 px-3.5 rounded-xl bg-gradient-to-r from-emerald-600/30 to-[#0c251b] hover:from-emerald-600/50 hover:to-[#123c2a] border border-[#00d26a]/40 text-[#00d26a] hover:text-white text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm active:scale-95 transition-all cursor-pointer"
+                      title="Verify the Draw Video"
                     >
-                      <ShieldCheck className="w-3.5 h-3.5 text-[#00d26a]" />
-                      <span>100% Trusted</span>
-                    </div>
+                      <Video className="w-3.5 h-3.5 text-[#00d26a]" />
+                      <span>Verify the Draw</span>
+                    </button>
                   </div>
                 </div>
               </div>
@@ -693,6 +700,97 @@ export const CampaignList: React.FC<CampaignListProps> = ({ onSelectCampaign }) 
             >
               {t('gotIt')}
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Verify Draw Video Modal */}
+      {verifyDrawCampaign && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in"
+          onClick={() => setVerifyDrawCampaign(null)}
+        >
+          <div
+            className="w-full max-w-lg bg-[#0e131b] border border-[#1a2230] rounded-3xl p-5 sm:p-6 shadow-2xl space-y-4 relative overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="flex items-center justify-between pb-3 border-b border-[#1a2230]">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-300">
+                  <Video className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm sm:text-base font-extrabold text-white">
+                    Verify Manual Draw
+                  </h3>
+                  <p className="text-[11px] text-fulus-muted font-medium truncate max-w-xs">
+                    {verifyDrawCampaign.title}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setVerifyDrawCampaign(null)}
+                className="p-1.5 rounded-xl text-[#94a3b8] hover:text-white hover:bg-[#131923] transition-colors"
+                title="Close"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Winning Number Callout */}
+            <div className="p-3 rounded-2xl bg-gradient-to-r from-amber-500/15 via-[#0e1f18] to-emerald-500/15 border border-amber-500/30 flex items-center justify-between">
+              <div>
+                <span className="text-[10px] font-black uppercase text-amber-400 block tracking-wider">
+                  Official Winning Number
+                </span>
+                <span className="text-xs text-slate-300 font-medium">
+                  {verifyDrawCampaign.latestDraw?.prizeLabel || verifyDrawCampaign.prizeDescription}
+                </span>
+              </div>
+              <div className="px-3.5 py-1.5 rounded-xl bg-amber-400/20 border border-amber-400/40 text-amber-300 font-mono font-black text-lg">
+                #{verifyDrawCampaign.latestDraw?.winningNumber}
+              </div>
+            </div>
+
+            {/* Video Player or Placeholder */}
+            {verifyDrawCampaign.drawVideoUrl ? (
+              <div className="space-y-2">
+                <div className="relative rounded-2xl overflow-hidden bg-black border border-slate-800 shadow-2xl aspect-video flex items-center justify-center">
+                  <video
+                    src={api.getDrawVideoPlaybackUrl(verifyDrawCampaign.id)}
+                    controls
+                    playsInline
+                    autoPlay
+                    className="w-full h-full object-contain"
+                  />
+                </div>
+                <p className="text-[10.5px] text-fulus-muted text-center">
+                  Official drawing video recorded and verified by lottery administration.
+                </p>
+              </div>
+            ) : (
+              <div className="py-10 px-4 text-center rounded-2xl bg-[#131923] border border-[#1a2230] space-y-2.5">
+                <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center mx-auto">
+                  <Video className="w-6 h-6 animate-pulse" />
+                </div>
+                <h4 className="text-sm font-bold text-white">Draw Video Being Uploaded</h4>
+                <p className="text-xs text-fulus-muted max-w-sm mx-auto">
+                  The manual draw has concluded! The administrator is uploading the video evidence to Telegram. Please check back shortly.
+                </p>
+              </div>
+            )}
+
+            {/* Close Button */}
+            <div className="pt-2">
+              <button
+                type="button"
+                onClick={() => setVerifyDrawCampaign(null)}
+                className="w-full py-2.5 rounded-xl bg-[#131923] hover:bg-[#1a2230] text-white font-bold text-xs transition-colors border border-[#1a2230]"
+              >
+                Close Verification
+              </button>
+            </div>
           </div>
         </div>
       )}

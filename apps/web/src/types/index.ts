@@ -15,6 +15,7 @@ export interface CampaignSummary {
   description?: string;
   prizeDescription: string;
   imageUrl?: string | null;
+  drawVideoUrl?: string | null;
   ticketPriceMinor: string;
   numberStart: number;
   numberEnd: number;
@@ -32,6 +33,7 @@ export interface CampaignSummary {
     prizeLabel: string;
     winningNumber: number;
     drawOrder?: number;
+    drawVideoUrl?: string | null;
     createdAt: string;
   } | null;
 }
@@ -175,6 +177,15 @@ export interface AdminLottery {
   description?: string;
   prizeDescription: string;
   imageUrl?: string | null;
+  drawVideoUrl?: string | null;
+  winningNumber?: number | null;
+  latestDraw?: {
+    id: string;
+    drawnAt: string;
+    winningNumber: number;
+    prizeLabel?: string | null;
+    drawVideoUrl?: string | null;
+  } | null;
   ticketPriceMinor: string;
   numberStart: number;
   numberEnd: number;

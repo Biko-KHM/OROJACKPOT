@@ -285,7 +285,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentAdmin }) => {
         <div>
           <h2 className="text-xl font-black text-white tracking-tight">Platform Settings & Security</h2>
           <p className="text-xs text-slate-400 mt-0.5">
-            Configure dual approval thresholds, review escalation, and administrative team credentials
+            Configure review escalation, operational parameters, and administrative team credentials
           </p>
         </div>
         <div className="flex items-center gap-2.5 self-start sm:self-auto flex-wrap">
@@ -332,45 +332,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentAdmin }) => {
 
         <form onSubmit={handleSaveSettings} className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Dual Approval Switch (FR-22) */}
-            <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800/80 space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-white">Dual Approval Requirement</span>
-                <input
-                  type="checkbox"
-                  disabled={!isSuperadmin}
-                  checked={settings.dualApprovalRequired}
-                  onChange={(e) =>
-                    setSettings({ ...settings, dualApprovalRequired: e.target.checked })
-                  }
-                  className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer disabled:cursor-not-allowed"
-                />
-              </div>
-              <p className="text-[11px] text-slate-400">
-                When enabled, purchases above the threshold require approval by two distinct admins before confirmation.
-              </p>
-            </div>
-
-            {/* Dual Approval Threshold */}
-            <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800/80 space-y-2">
-              <label className="block text-xs font-bold text-white">
-                Dual Approval Threshold (ETB)
-              </label>
-              <input
-                type="number"
-                disabled={!isSuperadmin || !settings.dualApprovalRequired}
-                value={Number(BigInt(settings.dualApprovalThresholdMinor || '1000000')) / 100}
-                onChange={(e) => {
-                  const minor = Math.round(parseFloat(e.target.value || '0') * 100);
-                  setSettings({ ...settings, dualApprovalThresholdMinor: minor.toString() });
-                }}
-                className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-xs text-white disabled:opacity-50"
-              />
-              <p className="text-[11px] text-slate-500">
-                Purchases exceeding this amount require second operator sign-off.
-              </p>
-            </div>
-
             {/* Review Escalation Delay */}
             <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800/80 space-y-2">
               <label className="block text-xs font-bold text-white">
@@ -439,7 +400,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentAdmin }) => {
                     <input
                       type="text"
                       disabled={!isSuperadmin}
-                      placeholder="@hiree_lottery or -1001234567890"
+                      placeholder="@orojackpot or -1001234567890"
                       value={settings.telegramChannelId || ''}
                       onChange={(e) =>
                         setSettings({ ...settings, telegramChannelId: e.target.value })
@@ -659,7 +620,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentAdmin }) => {
                   const isCurrent = currentAdmin.email === u.email || currentAdmin.id === u.id;
                   const isDeactivated = Boolean(u.isDeactivated);
                   const isLocked = Boolean(u.lockedUntil && new Date(u.lockedUntil) > new Date() && !isDeactivated);
-                  const isRootSuperadmin = (u.email || '').toLowerCase() === 'admin@hiree.com';
+                  const isRootSuperadmin = (u.email || '').toLowerCase() === 'admin@orojackpot.com';
                   const initials = ((u.firstName?.[0] || '') + (u.lastName?.[0] || '')).toUpperCase() || (u.email ? u.email.substring(0, 2).toUpperCase() : 'OP');
                   const displayName = [u.firstName, u.lastName].filter(Boolean).join(' ') || u.username || 'System Operator';
 
