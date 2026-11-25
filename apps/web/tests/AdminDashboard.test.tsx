@@ -567,6 +567,58 @@ describe('Step 10: Admin Dashboard & Verification Engine', () => {
     });
   });
 
+  it('6b. Mobile Viewport: renders bottom navigation bar matching mobile design and hides desktop sidebar', async () => {
+    // Simulate mobile viewport (e.g. smartphone or Telegram Mini App)
+    Object.defineProperty(window, 'innerWidth', { writable: true, configurable: true, value: 390 });
+    window.dispatchEvent(new Event('resize'));
+
+    const onLogoutMock = vi.fn();
+    const onSwitchMock = vi.fn();
+
+    global.fetch = vi.fn().mockImplementation((url: string) => {
+      const urlStr = url.toString();
+      if (urlStr.includes('/admin/overview')) {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: async () => mockOverview,
+        } as Response);
+      }
+      return Promise.resolve({ ok: true, status: 200, json: async () => [] } as Response);
+    });
+
+    render(
+      <AdminDashboard
+        admin={mockSuperadmin}
+        onLogout={onLogoutMock}
+        onSwitchToMiniApp={onSwitchMock}
+      />,
+    );
+
+    // Desktop sidebar must NOT be rendered on mobile
+    expect(screen.queryByRole('navigation', { name: /Admin Desktop Sidebar/i })).not.toBeInTheDocument();
+
+    // Mobile bottom navigation bar MUST be rendered
+    const mobileNav = screen.getByRole('navigation', { name: /Admin Mobile Navigation/i });
+    expect(mobileNav).toBeInTheDocument();
+
+    // Verify quick action buttons exist on mobile header
+    const customerViewBtn = screen.getByRole('button', { name: /Customer View/i });
+    expect(customerViewBtn).toBeInTheDocument();
+    fireEvent.click(customerViewBtn);
+    expect(onSwitchMock).toHaveBeenCalled();
+
+    // Test clicking mobile bottom nav item
+    fireEvent.click(screen.getByRole('button', { name: /Campaigns/i }));
+    await waitFor(() => {
+      expect(screen.getByText('Campaign Manager')).toBeInTheDocument();
+    });
+
+    // Reset window width back to desktop
+    Object.defineProperty(window, 'innerWidth', { writable: true, configurable: true, value: 1024 });
+    window.dispatchEvent(new Event('resize'));
+  });
+
   it('7. SettingsView Add Admin Modal provides role selection for both ADMIN and SUPERADMIN', async () => {
     global.fetch = vi.fn().mockImplementation((url: string) => {
       const urlStr = url.toString();

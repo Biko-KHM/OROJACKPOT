@@ -9,14 +9,13 @@ import {
   Settings,
   LogOut,
   ExternalLink,
-  Menu,
-  X,
   Search,
   Sparkles,
   AlertTriangle,
 } from 'lucide-react';
 import { AdminUser } from '../../types/index.js';
 import { api } from '../../api/client.js';
+import { triggerHaptic } from '../../utils/haptics.js';
 import { AdminOverviewView } from './AdminOverviewView.js';
 import { CampaignsView } from './CampaignsView.js';
 import { RefundsView } from './RefundsView.js';
@@ -45,19 +44,41 @@ export type AdminTab =
 interface NavItem {
   id: AdminTab;
   label: string;
+  shortLabel?: string;
   icon: React.ComponentType<{ className?: string }>;
   badge?: string;
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { id: 'overview', label: 'Dashboard', icon: LayoutDashboard },
-  { id: 'campaigns', label: 'Campaigns', icon: Layers },
-  { id: 'inventory', label: 'Inventory', icon: Package },
-  { id: 'reviews', label: 'Payment Reviews', icon: CheckSquare },
-  { id: 'reservations', label: 'Reservations', icon: Ticket },
-  { id: 'customers', label: 'Customers', icon: Users },
-  { id: 'settings', label: 'Settings', icon: Settings },
+  { id: 'overview', label: 'Dashboard', shortLabel: 'Dashboard', icon: LayoutDashboard },
+  { id: 'campaigns', label: 'Campaigns', shortLabel: 'Campaigns', icon: Layers },
+  { id: 'inventory', label: 'Inventory', shortLabel: 'Inventory', icon: Package },
+  { id: 'reviews', label: 'Payment Reviews', shortLabel: 'Reviews', icon: CheckSquare },
+  { id: 'reservations', label: 'Reservations', shortLabel: 'Reservations', icon: Ticket },
+  { id: 'customers', label: 'Customers', shortLabel: 'Customers', icon: Users },
+  { id: 'settings', label: 'Settings', shortLabel: 'Settings', icon: Settings },
 ];
+
+/**
+ * Hook to dynamically track whether the user is on a desktop/PC viewport (>= 1024px)
+ * or accessing via mobile phone / Telegram Mini App (< 1024px).
+ */
+const useIsDesktop = () => {
+  const [isDesktop, setIsDesktop] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return true;
+    return window.innerWidth >= 1024;
+  });
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsDesktop(window.innerWidth >= 1024);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  return isDesktop;
+};
 
 interface ErrorBoundaryProps {
   children: React.ReactNode;
@@ -130,9 +151,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [activeTab, setActiveTab] = useState<AdminTab>('overview');
   const [inspectLotteryId, setInspectLotteryId] = useState<string | undefined>(undefined);
   const [inspectLotteryTitle, setInspectLotteryTitle] = useState<string | undefined>(undefined);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [pendingReviewsCount, setPendingReviewsCount] = useState<number | null>(null);
+
+  // Dynamic desktop check: sidebar is rendered exclusively on desktop PC viewports (>= 1024px)
+  const isDesktop = useIsDesktop();
 
   // Poll / fetch overview on mount to display badge on Payment Reviews
   useEffect(() => {
@@ -150,12 +173,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     setInspectLotteryId(lotteryId);
     setInspectLotteryTitle(title);
     setActiveTab('inventory');
-    setIsMobileMenuOpen(false);
+    triggerHaptic('selection');
   };
 
   const handleSelectTab = (tab: AdminTab) => {
     setActiveTab(tab);
-    setIsMobileMenuOpen(false);
+    triggerHaptic('selection');
   };
 
   const handleLogout = async () => {
@@ -170,7 +193,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
   const currentItem = NAV_ITEMS.find((item) => item.id === activeTab) || NAV_ITEMS[0];
 
-  const filteredNavItems = NAV_ITEMS.map((item) => {
+  const navItemsWithBadges = NAV_ITEMS.map((item) => {
     if (item.id === 'reviews' && pendingReviewsCount && pendingReviewsCount > 0) {
       return { ...item, badge: `${pendingReviewsCount}` };
     }
@@ -178,183 +201,162 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       return { ...item, badge: 'View' };
     }
     return item;
-  }).filter((item) => {
+  });
+
+  const filteredNavItems = navItemsWithBadges.filter((item) => {
     if (!searchQuery.trim()) return true;
     return item.label.toLowerCase().includes(searchQuery.trim().toLowerCase());
   });
 
   return (
-    <div className="h-screen w-full bg-[#080b10] text-slate-100 flex p-2 sm:p-3.5 gap-3 overflow-hidden font-sans selection:bg-[#00d26a]/30">
-      {/* Mobile Backdrop Overlay */}
-      {isMobileMenuOpen && (
-        <div
-          className="fixed inset-0 z-40 bg-black/80 backdrop-blur-sm lg:hidden transition-opacity"
-          onClick={() => setIsMobileMenuOpen(false)}
-        />
-      )}
-
+    <div className="h-screen w-full bg-[#080b10] text-slate-100 flex p-0 lg:p-3.5 lg:gap-3 overflow-hidden font-sans selection:bg-[#00d26a]/30">
       {/* -------------------------------------------------------------------------- */}
-      {/* Sidebar (Styled in FulusApp obsidian & electric green theme)              */}
+      {/* Desktop Sidebar: ONLY shown when user logs into website through desktop/PC */}
       {/* -------------------------------------------------------------------------- */}
-      <aside
-        className={`fixed lg:static inset-y-2 left-2 z-50 w-60 xl:w-64 bg-[#0e131b] border border-[#1a2230] rounded-3xl flex flex-col justify-between p-3 sm:p-3.5 shadow-2xl backdrop-blur-xl transition-transform duration-300 ease-in-out lg:translate-x-0 ${
-          isMobileMenuOpen ? 'translate-x-0' : '-translate-x-[110%]'
-        }`}
-      >
-        {/* Top: Logo & Brand */}
-        <div className="flex flex-col min-h-0">
-          <div className="flex items-center justify-between px-1.5 pt-0.5 pb-2">
-            <div className="flex items-center gap-2.5">
-              {/* Luxury Logo Badge */}
-              <div className="relative w-9 h-9 rounded-2xl overflow-hidden p-0.5 bg-gradient-to-tr from-[#00d26a]/50 via-amber-400/30 to-[#00d26a]/40 shadow-md shadow-[#00d26a]/15 shrink-0">
-                <img src="/logo.png" alt="OROJACKPOT" className="w-full h-full object-cover rounded-[12px]" />
-              </div>
+      {isDesktop && (
+        <aside
+          role="navigation"
+          aria-label="Admin Desktop Sidebar"
+          className="hidden lg:flex w-60 xl:w-64 bg-[#0e131b] border border-[#1a2230] rounded-3xl flex-col justify-between p-3 sm:p-3.5 shadow-2xl backdrop-blur-xl shrink-0"
+        >
+          {/* Top: Logo & Brand */}
+          <div className="flex flex-col min-h-0">
+            <div className="flex items-center justify-between px-1.5 pt-0.5 pb-2">
+              <div className="flex items-center gap-2.5">
+                {/* Luxury Logo Badge */}
+                <div className="relative w-9 h-9 rounded-2xl overflow-hidden p-0.5 bg-gradient-to-tr from-[#00d26a]/50 via-amber-400/30 to-[#00d26a]/40 shadow-md shadow-[#00d26a]/15 shrink-0">
+                  <img src="/logo.png" alt="OROJACKPOT" className="w-full h-full object-cover rounded-[12px]" />
+                </div>
 
-              <div>
-                <h1 className="text-sm font-extrabold font-display tracking-tight text-white flex items-center gap-1.5 leading-none">
-                  <span>OROJACKPOT</span>
-                  <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-[#0c251b] text-[#00d26a] font-bold border border-[#123c2a]">
-                    Portal
-                  </span>
-                </h1>
-                <p className="text-[9.5px] text-[#00d26a] font-semibold tracking-wide uppercase mt-0.5 flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#00d26a] animate-pulse" />
-                  <span>{admin.role === 'SUPERADMIN' ? 'Superadmin' : 'Coordinator'}</span>
-                </p>
+                <div>
+                  <h1 className="text-sm font-extrabold font-display tracking-tight text-white flex items-center gap-1.5 leading-none">
+                    <span>OROJACKPOT</span>
+                    <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-[#0c251b] text-[#00d26a] font-bold border border-[#123c2a]">
+                      Portal
+                    </span>
+                  </h1>
+                  <p className="text-[9.5px] text-[#00d26a] font-semibold tracking-wide uppercase mt-0.5 flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#00d26a] animate-pulse" />
+                    <span>{admin.role === 'SUPERADMIN' ? 'Superadmin' : 'Coordinator'}</span>
+                  </p>
+                </div>
               </div>
             </div>
 
-            {/* Mobile Close Button */}
-            <button
-              onClick={() => setIsMobileMenuOpen(false)}
-              className="lg:hidden p-1 rounded-lg text-[#94a3b8] hover:text-white hover:bg-[#131923] transition-colors"
-            >
-              <X className="w-4 h-4" />
-            </button>
+            {/* Divider line under brand */}
+            <div className="h-px bg-[#1a2230] mx-1 mb-2" />
+
+            {/* Navigation Items */}
+            <nav className="space-y-0.5 xl:space-y-1 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              {filteredNavItems.length === 0 ? (
+                <div className="py-4 px-2 text-center text-xs text-[#64748b]">
+                  No matching views
+                </div>
+              ) : (
+                filteredNavItems.map(({ id, label, icon: Icon, badge }) => {
+                  const isActive = activeTab === id;
+                  return (
+                    <button
+                      key={`desktop-${id}`}
+                      onClick={() => handleSelectTab(id)}
+                      className={`w-full flex items-center justify-between px-3 py-1.5 xl:py-2 rounded-xl font-semibold text-xs transition-all text-left group ${
+                        isActive
+                          ? 'bg-[#00d26a] text-white font-bold shadow-md shadow-[#00d26a]/20'
+                          : 'text-[#94a3b8] hover:text-white hover:bg-[#131923]'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <Icon
+                          className={`w-4 h-4 shrink-0 transition-colors ${
+                            isActive
+                              ? 'text-white'
+                              : 'text-[#64748b] group-hover:text-[#00d26a]'
+                          }`}
+                        />
+                        <span className="tracking-wide text-[11.5px] xl:text-xs truncate">{label}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        {isActive && (
+                          <span className="w-1.5 h-1.5 rounded-full bg-white shadow-[0_0_6px_rgba(255,255,255,0.8)] animate-pulse" />
+                        )}
+                        {badge && (
+                          <span
+                            className={`px-1.5 py-0.5 text-[9px] font-bold rounded-full ${
+                              isActive
+                                ? 'bg-black/25 text-white'
+                                : id === 'reviews'
+                                ? 'bg-[#261a0c] text-[#f59e0b] border border-[#422b13]'
+                                : 'bg-[#0c251b] text-[#00d26a] border border-[#123c2a]'
+                            }`}
+                          >
+                            {badge}
+                          </span>
+                        )}
+                      </div>
+                    </button>
+                  );
+                })
+              )}
+            </nav>
           </div>
 
-          {/* Divider line under brand */}
-          <div className="h-px bg-[#1a2230] mx-1 mb-2" />
-
-          {/* Navigation Items (Compact, sleek buttons fitting comfortably without scrollbar) */}
-          <nav className="space-y-0.5 xl:space-y-1 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            {filteredNavItems.length === 0 ? (
-              <div className="py-4 px-2 text-center text-xs text-[#64748b]">
-                No matching views
-              </div>
-            ) : (
-              filteredNavItems.map(({ id, label, icon: Icon, badge }) => {
-                const isActive = activeTab === id;
-                return (
-                  <button
-                    key={id}
-                    onClick={() => handleSelectTab(id)}
-                    className={`w-full flex items-center justify-between px-3 py-1.5 xl:py-2 rounded-xl font-semibold text-xs transition-all text-left group ${
-                      isActive
-                        ? 'bg-[#00d26a] text-white font-bold shadow-md shadow-[#00d26a]/20'
-                        : 'text-[#94a3b8] hover:text-white hover:bg-[#131923]'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <Icon
-                        className={`w-4 h-4 shrink-0 transition-colors ${
-                          isActive
-                            ? 'text-white'
-                            : 'text-[#64748b] group-hover:text-[#00d26a]'
-                        }`}
-                      />
-                      <span className="tracking-wide text-[11.5px] xl:text-xs truncate">{label}</span>
-                    </div>
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      {isActive && (
-                        <span className="w-1.5 h-1.5 rounded-full bg-white shadow-[0_0_6px_rgba(255,255,255,0.8)] animate-pulse" />
-                      )}
-                      {badge && (
-                        <span
-                          className={`px-1.5 py-0.5 text-[9px] font-bold rounded-full ${
-                            isActive
-                              ? 'bg-black/25 text-white'
-                              : id === 'reviews'
-                              ? 'bg-[#261a0c] text-[#f59e0b] border border-[#422b13]'
-                              : 'bg-[#0c251b] text-[#00d26a] border border-[#123c2a]'
-                          }`}
-                        >
-                          {badge}
-                        </span>
-                      )}
-                    </div>
-                  </button>
-                );
-              })
-            )}
-          </nav>
-        </div>
-
-        {/* Bottom Section: Profile & Clean [← Logout Button */}
-        <div className="pt-2.5 border-t border-[#1a2230] space-y-1.5 px-1 mt-2">
-          {/* Quick link to Customer Mini App */}
-          <button
-            onClick={onSwitchToMiniApp}
-            className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl bg-[#131923] hover:bg-[#1a2230] text-[#94a3b8] hover:text-white text-[11px] font-medium transition-all border border-[#1a2230]"
-            title="Open Customer Mini App View"
-          >
-            <span className="flex items-center gap-2">
-              <Sparkles className="w-3.5 h-3.5 text-[#00d26a] shrink-0" />
-              <span>Customer View</span>
-            </span>
-            <ExternalLink className="w-3 h-3 text-[#64748b] shrink-0" />
-          </button>
-
-          {/* Minimalist [← Logout Button */}
-          <button
-            onClick={() => void handleLogout()}
-            className="w-full flex items-center gap-2 px-2.5 py-1.5 text-[#94a3b8] hover:text-rose-400 hover:bg-rose-500/10 rounded-xl text-[11px] font-semibold transition-all group"
-            title="Log Out"
-          >
-            <LogOut className="w-3.5 h-3.5 text-[#64748b] group-hover:text-rose-400 transition-colors transform -rotate-180 shrink-0" />
-            <span>Logout</span>
-          </button>
-        </div>
-      </aside>
-
-      {/* -------------------------------------------------------------------------- */}
-      {/* Main Content Card (Rounded-3xl panel in FulusApp styling)                  */}
-      {/* -------------------------------------------------------------------------- */}
-      <div className="flex-1 flex flex-col min-w-0 bg-[#0e131b] border border-[#1a2230] rounded-3xl overflow-hidden shadow-2xl">
-        {/* Top App Header with Search & Active Breadcrumbs */}
-        <header className="h-16 flex-shrink-0 bg-[#0e131b] border-b border-[#1a2230] px-4 sm:px-8 flex items-center justify-between gap-4 z-20">
-          <div className="flex items-center gap-3">
-            {/* Mobile Hamburger Toggle */}
+          {/* Bottom Section: Customer View & Logout Button */}
+          <div className="pt-2.5 border-t border-[#1a2230] space-y-1.5 px-1 mt-2">
+            {/* Quick link to Customer Mini App */}
             <button
-              onClick={() => setIsMobileMenuOpen(true)}
-              className="lg:hidden p-2 rounded-xl text-[#94a3b8] hover:text-white hover:bg-[#131923] transition-colors"
-              aria-label="Open Sidebar Menu"
+              onClick={onSwitchToMiniApp}
+              className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl bg-[#131923] hover:bg-[#1a2230] text-[#94a3b8] hover:text-white text-[11px] font-medium transition-all border border-[#1a2230]"
+              title="Open Customer Mini App View"
             >
-              <Menu className="w-5 h-5" />
+              <span className="flex items-center gap-2">
+                <Sparkles className="w-3.5 h-3.5 text-[#00d26a] shrink-0" />
+                <span>Customer View</span>
+              </span>
+              <ExternalLink className="w-3 h-3 text-[#64748b] shrink-0" />
             </button>
 
+            {/* Minimalist Logout Button */}
+            <button
+              onClick={() => void handleLogout()}
+              className="w-full flex items-center gap-2 px-2.5 py-1.5 text-[#94a3b8] hover:text-rose-400 hover:bg-rose-500/10 rounded-xl text-[11px] font-semibold transition-all group"
+              title="Log Out"
+            >
+              <LogOut className="w-3.5 h-3.5 text-[#64748b] group-hover:text-rose-400 transition-colors transform -rotate-180 shrink-0" />
+              <span>Logout</span>
+            </button>
+          </div>
+        </aside>
+      )}
+
+      {/* -------------------------------------------------------------------------- */}
+      {/* Main Content Area                                                         */}
+      {/* -------------------------------------------------------------------------- */}
+      <div className="flex-1 flex flex-col min-w-0 bg-[#0e131b] border-0 lg:border border-[#1a2230] rounded-none lg:rounded-3xl overflow-hidden shadow-2xl relative">
+        {/* Top App Header */}
+        <header className="h-16 flex-shrink-0 bg-[#0e131b] border-b border-[#1a2230] px-3 sm:px-6 lg:px-8 flex items-center justify-between gap-3 z-20">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
             {/* Active Page Header with Breadcrumb */}
-            <div className="flex items-center gap-2.5">
+            <div className="flex items-center gap-2.5 min-w-0">
               <div className="w-8 h-8 rounded-xl bg-[#0c251b] border border-[#123c2a] flex items-center justify-center text-[#00d26a] shrink-0">
                 <currentItem.icon className="w-4 h-4" />
               </div>
-              <div>
-                <div className="flex items-center gap-1.5 text-[10.5px] text-[#64748b] font-medium leading-none">
+              <div className="min-w-0">
+                <div className="flex items-center gap-1.5 text-[10px] text-[#64748b] font-medium leading-none">
                   <span>Portal</span>
                   <span>/</span>
-                  <span className="text-[#94a3b8]">{admin.role === 'SUPERADMIN' ? 'Superadmin' : 'Coordinator'}</span>
+                  <span className="text-[#94a3b8] truncate">{admin.role === 'SUPERADMIN' ? 'Superadmin' : 'Coordinator'}</span>
                 </div>
-                <h2 className="text-sm sm:text-base font-bold font-display text-white tracking-tight leading-none mt-1">
+                <h2 className="text-sm sm:text-base font-bold font-display text-white tracking-tight leading-none mt-1 truncate">
                   {currentItem.label}
                 </h2>
               </div>
             </div>
           </div>
 
-          {/* Right Header Area: Search Bar */}
-          <div className="flex items-center gap-3">
-            {/* Modern Search Pill Input */}
-            <div className="relative hidden md:block w-64 xl:w-80">
+          {/* Right Header Area */}
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+            {/* Search Input on Desktop */}
+            <div className="relative hidden md:block w-60 xl:w-80">
               <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-[#64748b]" />
               <input
                 type="text"
@@ -365,7 +367,32 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               />
             </div>
 
-            {/* System Status Pill */}
+            {/* Mobile-Only Quick Access: Customer Mini App View */}
+            {!isDesktop && (
+              <button
+                onClick={onSwitchToMiniApp}
+                className="lg:hidden flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-[#131923] border border-[#1a2230] text-[#94a3b8] hover:text-white text-[11px] font-semibold transition-all active:scale-95"
+                title="Customer Mini App View"
+                aria-label="Customer View"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-[#00d26a]" />
+                <span className="hidden sm:inline">Mini App</span>
+              </button>
+            )}
+
+            {/* Mobile-Only Quick Access: Logout */}
+            {!isDesktop && (
+              <button
+                onClick={() => void handleLogout()}
+                className="lg:hidden flex items-center p-2 rounded-xl bg-[#131923] border border-[#1a2230] text-[#94a3b8] hover:text-rose-400 hover:bg-rose-500/10 transition-colors active:scale-95"
+                title="Logout"
+                aria-label="Logout"
+              >
+                <LogOut className="w-4 h-4 text-[#94a3b8] transform -rotate-180" />
+              </button>
+            )}
+
+            {/* Live Indicator on Desktop */}
             <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#0c251b] border border-[#123c2a] text-[11px] font-medium">
               <span className="h-1.5 w-1.5 rounded-full bg-[#00d26a] animate-pulse"></span>
               <span className="font-semibold text-[#00d26a]">Live</span>
@@ -381,8 +408,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           </div>
         </header>
 
-        {/* Scrollable View Content with unseen / invisible scrollbar */}
-        <main className="flex-1 overflow-y-auto p-4 sm:p-8 transition-colors no-scrollbar">
+        {/* Scrollable View Content with bottom padding so bottom nav doesn't cover anything */}
+        <main className="flex-1 overflow-y-auto p-3.5 sm:p-6 lg:p-8 pb-24 lg:pb-8 transition-colors no-scrollbar">
           <div className="max-w-7xl mx-auto space-y-6">
             <AdminErrorBoundary fallbackViewName={currentItem.label}>
               {activeTab === 'overview' && (
@@ -405,6 +432,76 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             </AdminErrorBoundary>
           </div>
         </main>
+
+        {/* -------------------------------------------------------------------------- */}
+        {/* Mobile / Telegram Mini App Bottom Menubar                                  */}
+        {/* Styled precisely according to user reference: top indicator pill & halo     */}
+        {/* -------------------------------------------------------------------------- */}
+        {!isDesktop && (
+          <nav
+            role="navigation"
+            aria-label="Admin Mobile Navigation"
+            className="fixed bottom-0 left-0 right-0 z-40 bg-[#0e131b]/95 backdrop-blur-xl border-t border-[#1a2230] pb-[max(0.6rem,env(safe-area-inset-bottom,0px))] pt-1 px-1 lg:hidden shadow-[0_-4px_24px_rgba(0,0,0,0.6)] select-none"
+          >
+            <div className="grid grid-cols-7 max-w-lg mx-auto items-center">
+              {navItemsWithBadges.map(({ id, label, shortLabel, icon: Icon, badge }) => {
+                const isActive = activeTab === id;
+                return (
+                  <button
+                    key={`mobile-${id}`}
+                    type="button"
+                    onClick={() => handleSelectTab(id)}
+                    aria-label={label}
+                    aria-current={isActive ? 'page' : undefined}
+                    className="flex flex-col items-center justify-center py-0.5 px-0.5 group active:scale-95 transition-all focus:outline-none"
+                  >
+                    {/* Top Indicator Pill Bar (centered pill matching reference image) */}
+                    <div
+                      className={`w-7 h-1 rounded-full mb-1 transition-all duration-300 ${
+                        isActive
+                          ? 'bg-[#00d26a] shadow-[0_2px_8px_rgba(0,210,106,0.7)]'
+                          : 'bg-transparent'
+                      }`}
+                    />
+
+                    {/* Icon container with soft circular halo on active tab */}
+                    <div
+                      className={`relative w-9 h-9 rounded-full flex items-center justify-center transition-all duration-200 ${
+                        isActive
+                          ? 'bg-[#00d26a]/15 text-[#00d26a]'
+                          : 'text-[#64748b] group-hover:text-[#94a3b8]'
+                      }`}
+                    >
+                      <Icon className="w-5 h-5" />
+
+                      {/* Notification Badge on top right of icon */}
+                      {badge && (
+                        <span
+                          className={`absolute -top-0.5 -right-0.5 min-w-[15px] h-[15px] px-1 rounded-full text-[8.5px] font-black flex items-center justify-center border shadow-sm leading-none ${
+                            id === 'reviews'
+                              ? 'bg-amber-500 text-black border-amber-300 animate-pulse'
+                              : 'bg-[#00d26a] text-black border-[#00d26a]'
+                          }`}
+                        >
+                          {badge}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Label below icon */}
+                    <span
+                      className={`text-[9.5px] tracking-tight truncate max-w-full leading-tight mt-0.5 transition-colors ${
+                        isActive ? 'font-bold text-[#00d26a]' : 'font-medium text-[#64748b]'
+                      }`}
+                    >
+                      {shortLabel || label}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </nav>
+        )}
       </div>
     </div>
   );
