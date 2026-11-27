@@ -27,13 +27,29 @@ export interface TelegramChat {
   username?: string;
 }
 
+export interface TelegramMessageEntity {
+  type: string;
+  offset: number;
+  length: number;
+  url?: string;
+  user?: TelegramUser;
+}
+
 export interface TelegramMessage {
   message_id: number;
   from?: TelegramUser;
+  sender_chat?: TelegramChat;
   chat: TelegramChat;
   date: number;
   text?: string;
   caption?: string;
+  entities?: TelegramMessageEntity[];
+  caption_entities?: TelegramMessageEntity[];
+  new_chat_members?: TelegramUser[];
+  new_chat_participant?: TelegramUser;
+  new_chat_member?: TelegramUser;
+  left_chat_member?: TelegramUser;
+  left_chat_participant?: TelegramUser;
   photo?: Array<{
     file_id: string;
     file_unique_id: string;
@@ -499,7 +515,69 @@ export async function processTelegramUpdate(update: TelegramUpdate): Promise<{ o
     return { ok: true, status: 'CALLBACK_HANDLED' };
   }
 
-  // 2. Handle Text Messages / Commands
+  // 2. Group / Channel Moderation: Autodelete Join/Leave Service Messages & Unauthorized Links
+  if (update.message) {
+    const msg = update.message;
+    const chatType = msg.chat.type;
+    const isGroupOrChannel =
+      chatType === 'group' || chatType === 'supergroup' || chatType === 'channel';
+
+    // A. Autodelete user join and leave service notifications in groups and channels
+    const isServiceJoinLeave = Boolean(
+      (msg.new_chat_members && msg.new_chat_members.length > 0) ||
+      msg.new_chat_participant ||
+      msg.new_chat_member ||
+      msg.left_chat_member ||
+      msg.left_chat_participant
+    );
+
+    if (isServiceJoinLeave) {
+      logger.info(
+        { chatId: msg.chat.id, messageId: msg.message_id },
+        'Autodeleting user join/leave service message in group/channel',
+      );
+      await client.deleteMessage(msg.chat.id, msg.message_id);
+      return { ok: true, status: 'SERVICE_JOIN_LEAVE_DELETED' };
+    }
+
+    // B. Autodelete messages containing links in groups/channels when sent by non-administrators
+    if (isGroupOrChannel) {
+      const entities = [...(msg.entities || []), ...(msg.caption_entities || [])];
+      const hasUrlEntity = entities.some(
+        (e) => e.type === 'url' || e.type === 'text_link',
+      );
+      const textToScan = `${msg.text || ''} ${msg.caption || ''}`;
+      const hasUrlText = /(?:https?:\/\/|www\.|t\.me\/|telegram\.me\/|tg:\/\/)[^\s]+/i.test(textToScan);
+
+      if (hasUrlEntity || hasUrlText) {
+        let isSenderAdmin = false;
+        // Allow messages sent directly by the channel itself
+        if (msg.sender_chat && String(msg.sender_chat.id) === String(msg.chat.id)) {
+          isSenderAdmin = true;
+        } else if (msg.from) {
+          try {
+            const member = await client.getChatMember(msg.chat.id, msg.from.id);
+            if (member.status === 'creator' || member.status === 'administrator') {
+              isSenderAdmin = true;
+            }
+          } catch {
+            isSenderAdmin = false;
+          }
+        }
+
+        if (!isSenderAdmin) {
+          logger.info(
+            { chatId: msg.chat.id, messageId: msg.message_id, from: msg.from?.id },
+            'Autodeleting unauthorized link message in group/channel',
+          );
+          await client.deleteMessage(msg.chat.id, msg.message_id);
+          return { ok: true, status: 'UNAUTHORIZED_LINK_DELETED' };
+        }
+      }
+    }
+  }
+
+  // 3. Handle Text Messages / Commands
   if (update.message && update.message.text) {
     const msg = update.message;
     const text = (msg.text || '').trim();

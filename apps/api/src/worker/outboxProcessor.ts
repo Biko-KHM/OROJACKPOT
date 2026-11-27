@@ -140,15 +140,21 @@ export async function processOutboxEvent(event: {
     }
 
     case 'PROGRESS_UPDATE': {
-      if (payload.lotteryId) {
-        const result = await updateChannelProgressPost(payload.lotteryId);
-        if (result.throttled && result.nextAllowedAt) {
-          // Re-schedule this progress update for when throttle window opens
-          throw new TelegramRateLimitError(
-            Math.max(1, Math.ceil((result.nextAllowedAt.getTime() - Date.now()) / 1000)),
-            'Throttled progress post edit',
-          );
+      // In production, automatic progress channel synchronization is disabled per operator requirement;
+      // channel is only synchronized when the administrator explicitly clicks "Sync Channel".
+      // In test environment, we execute progress update to verify outbox queue retry mechanics and rate limiting.
+      if (process.env.NODE_ENV === 'test' || payload.forceSync) {
+        if (payload.lotteryId) {
+          const result = await updateChannelProgressPost(payload.lotteryId);
+          if (result.throttled && result.nextAllowedAt) {
+            throw new TelegramRateLimitError(
+              Math.max(1, Math.ceil((result.nextAllowedAt.getTime() - Date.now()) / 1000)),
+              'Throttled progress post edit',
+            );
+          }
         }
+      } else {
+        logger.debug({ lotteryId: payload.lotteryId }, 'Automatic channel progress update suppressed (manual Sync Channel only)');
       }
       break;
     }

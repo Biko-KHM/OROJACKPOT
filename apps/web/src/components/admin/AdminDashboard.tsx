@@ -52,10 +52,23 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   { id: 'overview', label: 'Dashboard', shortLabel: 'Dashboard', icon: LayoutDashboard },
   { id: 'campaigns', label: 'Campaigns', shortLabel: 'Campaigns', icon: Layers },
-  { id: 'inventory', label: 'Inventory', shortLabel: 'Inventory', icon: Package },
   { id: 'reviews', label: 'Payment Reviews', shortLabel: 'Reviews', icon: CheckSquare },
+  { id: 'inventory', label: 'Inventory', shortLabel: 'Inventory', icon: Package },
   { id: 'reservations', label: 'Reservations', shortLabel: 'Reservations', icon: Ticket },
   { id: 'customers', label: 'Customers', shortLabel: 'Customers', icon: Users },
+  { id: 'settings', label: 'Settings', shortLabel: 'Settings', icon: Settings },
+];
+
+/**
+ * Mobile navigation items: combines Reservations and Customers into a single button,
+ * and positions Reviews right next to Campaigns.
+ */
+const MOBILE_NAV_ITEMS: NavItem[] = [
+  { id: 'overview', label: 'Dashboard', shortLabel: 'Dashboard', icon: LayoutDashboard },
+  { id: 'campaigns', label: 'Campaigns', shortLabel: 'Campaigns', icon: Layers },
+  { id: 'reviews', label: 'Payment Reviews', shortLabel: 'Reviews', icon: CheckSquare },
+  { id: 'inventory', label: 'Inventory', shortLabel: 'Inventory', icon: Package },
+  { id: 'customers', label: 'Customers & Reservations', shortLabel: 'Customers', icon: Users },
   { id: 'settings', label: 'Settings', shortLabel: 'Settings', icon: Settings },
 ];
 
@@ -203,6 +216,16 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     return item;
   });
 
+  const mobileNavItemsWithBadges = MOBILE_NAV_ITEMS.map((item) => {
+    if (item.id === 'reviews' && pendingReviewsCount && pendingReviewsCount > 0) {
+      return { ...item, badge: `${pendingReviewsCount}` };
+    }
+    if (item.id === 'settings' && admin.role !== 'SUPERADMIN') {
+      return { ...item, badge: 'View' };
+    }
+    return item;
+  });
+
   const filteredNavItems = navItemsWithBadges.filter((item) => {
     if (!searchQuery.trim()) return true;
     return item.label.toLowerCase().includes(searchQuery.trim().toLowerCase());
@@ -225,7 +248,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               <div className="flex items-center gap-2.5">
                 {/* Luxury Logo Badge */}
                 <div className="relative w-9 h-9 rounded-2xl overflow-hidden p-0.5 bg-gradient-to-tr from-[#00d26a]/50 via-amber-400/30 to-[#00d26a]/40 shadow-md shadow-[#00d26a]/15 shrink-0">
-                  <img src="/logo.png" alt="OROJACKPOT" className="w-full h-full object-cover rounded-[12px]" />
+                  <img src="/logojackpot.jpg" alt="OROJACKPOT" className="w-full h-full object-cover rounded-[12px]" />
                 </div>
 
                 <div>
@@ -426,8 +449,48 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 />
               )}
               {activeTab === 'reviews' && <PaymentReviewsView />}
-              {activeTab === 'reservations' && <ReservationsView />}
-              {activeTab === 'customers' && <CustomersView />}
+              {(activeTab === 'customers' || activeTab === 'reservations') && (
+                <div className="space-y-4">
+                  {/* Segmented Sub-Tab Switcher to toggle between Customers Directory and Reservations Ledger */}
+                  <div className="flex items-center gap-1.5 p-1 bg-[#131923] border border-[#1a2230] rounded-2xl w-full sm:w-fit">
+                    <button
+                      type="button"
+                      aria-label="Player Directory"
+                      onClick={() => {
+                        setActiveTab('customers');
+                        triggerHaptic('selection');
+                      }}
+                      className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                        activeTab === 'customers'
+                          ? 'bg-[#00d26a] text-black shadow-md shadow-[#00d26a]/20'
+                          : 'text-[#94a3b8] hover:text-white hover:bg-[#1a2230]'
+                      }`}
+                    >
+                      <Users className="w-4 h-4 shrink-0" />
+                      <span>Player Directory</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      aria-label="Ticket Ledger"
+                      onClick={() => {
+                        setActiveTab('reservations');
+                        triggerHaptic('selection');
+                      }}
+                      className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                        activeTab === 'reservations'
+                          ? 'bg-[#00d26a] text-black shadow-md shadow-[#00d26a]/20'
+                          : 'text-[#94a3b8] hover:text-white hover:bg-[#1a2230]'
+                      }`}
+                    >
+                      <Ticket className="w-4 h-4 shrink-0" />
+                      <span>Ticket Ledger</span>
+                    </button>
+                  </div>
+
+                  {activeTab === 'customers' ? <CustomersView /> : <ReservationsView />}
+                </div>
+              )}
               {activeTab === 'settings' && <SettingsView currentAdmin={admin} />}
             </AdminErrorBoundary>
           </div>
@@ -435,7 +498,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
         {/* -------------------------------------------------------------------------- */}
         {/* Mobile / Telegram Mini App Bottom Menubar                                  */}
-        {/* Styled precisely according to user reference: top indicator pill & halo     */}
+        {/* Adjusted order: Reviews next to Campaigns, combined Customers & Reservations*/}
+        {/* Clean icon without circle halo on click or active                           */}
         {/* -------------------------------------------------------------------------- */}
         {!isDesktop && (
           <nav
@@ -443,9 +507,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             aria-label="Admin Mobile Navigation"
             className="fixed bottom-0 left-0 right-0 z-40 bg-[#0e131b]/95 backdrop-blur-xl border-t border-[#1a2230] pb-[max(0.6rem,env(safe-area-inset-bottom,0px))] pt-1 px-1 lg:hidden shadow-[0_-4px_24px_rgba(0,0,0,0.6)] select-none"
           >
-            <div className="grid grid-cols-7 max-w-lg mx-auto items-center">
-              {navItemsWithBadges.map(({ id, label, shortLabel, icon: Icon, badge }) => {
-                const isActive = activeTab === id;
+            <div className="grid grid-cols-6 max-w-lg mx-auto items-center">
+              {mobileNavItemsWithBadges.map(({ id, label, shortLabel, icon: Icon, badge }) => {
+                const isActive = (id === 'customers' && (activeTab === 'customers' || activeTab === 'reservations')) || activeTab === id;
                 return (
                   <button
                     key={`mobile-${id}`}
@@ -453,9 +517,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     onClick={() => handleSelectTab(id)}
                     aria-label={label}
                     aria-current={isActive ? 'page' : undefined}
-                    className="flex flex-col items-center justify-center py-0.5 px-0.5 group active:scale-95 transition-all focus:outline-none"
+                    className="flex flex-col items-center justify-center py-1 px-0.5 group active:scale-95 transition-all focus:outline-none outline-none select-none [-webkit-tap-highlight-color:transparent]"
                   >
-                    {/* Top Indicator Pill Bar (centered pill matching reference image) */}
+                    {/* Top Indicator Pill Bar (centered emerald pill matching reference image) */}
                     <div
                       className={`w-7 h-1 rounded-full mb-1 transition-all duration-300 ${
                         isActive
@@ -464,11 +528,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       }`}
                     />
 
-                    {/* Icon container with soft circular halo on active tab */}
+                    {/* Icon container - clean, without circular background */}
                     <div
-                      className={`relative w-9 h-9 rounded-full flex items-center justify-center transition-all duration-200 ${
+                      className={`relative w-8 h-8 flex items-center justify-center transition-colors duration-200 ${
                         isActive
-                          ? 'bg-[#00d26a]/15 text-[#00d26a]'
+                          ? 'text-[#00d26a]'
                           : 'text-[#64748b] group-hover:text-[#94a3b8]'
                       }`}
                     >
@@ -477,7 +541,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       {/* Notification Badge on top right of icon */}
                       {badge && (
                         <span
-                          className={`absolute -top-0.5 -right-0.5 min-w-[15px] h-[15px] px-1 rounded-full text-[8.5px] font-black flex items-center justify-center border shadow-sm leading-none ${
+                          className={`absolute -top-1 -right-2 min-w-[15px] h-[15px] px-1 rounded-full text-[8.5px] font-black flex items-center justify-center border shadow-sm leading-none ${
                             id === 'reviews'
                               ? 'bg-amber-500 text-black border-amber-300 animate-pulse'
                               : 'bg-[#00d26a] text-black border-[#00d26a]'

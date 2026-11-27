@@ -101,6 +101,10 @@ export interface ITelegramClient {
     chatId: string | number | bigint,
     userId: number | bigint,
   ): Promise<{ status: string; can_post_messages?: boolean; can_edit_messages?: boolean }>;
+  deleteMessage(
+    chatId: string | number | bigint,
+    messageId: number | bigint,
+  ): Promise<boolean>;
 }
 
 export class DefaultTelegramClient implements ITelegramClient {
@@ -394,6 +398,25 @@ export class DefaultTelegramClient implements ITelegramClient {
         user_id: Number(userId),
       },
     );
+  }
+
+  async deleteMessage(
+    chatId: string | number | bigint,
+    messageId: number | bigint,
+  ): Promise<boolean> {
+    try {
+      const res = await this.request<boolean>('deleteMessage', {
+        chat_id: chatId.toString(),
+        message_id: Number(messageId),
+      });
+      return Boolean(res);
+    } catch (err: unknown) {
+      logger.debug(
+        { err, chatId: chatId.toString(), messageId: Number(messageId) },
+        'Could not delete Telegram message (bot may lack delete permissions)',
+      );
+      return false;
+    }
   }
 }
 

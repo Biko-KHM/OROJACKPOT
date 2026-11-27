@@ -19,6 +19,7 @@ import {
   getLotteryNumbersSummary,
   completeManualDraw,
   updateLotteryDrawVideo,
+  updateLotteryDrawLiveUrl,
   LotteryError,
 } from './service.js';
 import { uploadDrawVideoToTelegram, streamDrawVideo } from './videoStorage.js';
@@ -588,6 +589,7 @@ adminLotteriesRouter.post('/:id/manual-draw', async (req: Request, res: Response
   const winningNumber = Number(req.body?.winningNumber);
   const prizeLabel = req.body?.prizeLabel as string | undefined;
   const drawVideoUrl = req.body?.drawVideoUrl as string | undefined;
+  const drawLiveUrl = req.body?.drawLiveUrl as string | undefined;
 
   if (isNaN(winningNumber)) {
     res.status(400).json({
@@ -603,6 +605,7 @@ adminLotteriesRouter.post('/:id/manual-draw', async (req: Request, res: Response
       winningNumber,
       prizeLabel,
       drawVideoUrl,
+      drawLiveUrl,
       requestId,
     });
     res.status(200).json({ success: true, ...result, requestId });
@@ -613,6 +616,28 @@ adminLotteriesRouter.post('/:id/manual-draw', async (req: Request, res: Response
     }
     const message = err instanceof Error ? err.message : 'Failed to complete manual draw';
     logger.error({ err, lotteryId, requestId }, 'Manual draw completion error');
+    res.status(500).json({ error: { code: 'INTERNAL_ERROR', message, requestId } });
+  }
+});
+
+// POST /admin/lotteries/:id/live-stream
+// Superadmin / Admin broadcasts or sets a live stream link (TikTok, YouTube, Facebook Live) during the draw process
+adminLotteriesRouter.post('/:id/live-stream', async (req: Request, res: Response) => {
+  const requestId = req.headers['x-request-id'] as string;
+  const lotteryId = req.params.id as string;
+  const admin = req.admin!;
+  const drawLiveUrl = (req.body?.drawLiveUrl as string) ?? '';
+
+  try {
+    const updated = await updateLotteryDrawLiveUrl(lotteryId, drawLiveUrl, admin.id);
+    res.status(200).json({ success: true, lottery: updated, requestId });
+  } catch (err) {
+    if (err instanceof LotteryError) {
+      res.status(err.statusCode).json({ error: { code: err.code, message: err.message, requestId } });
+      return;
+    }
+    const message = err instanceof Error ? err.message : 'Failed to update live stream URL';
+    logger.error({ err, lotteryId, requestId }, 'Live stream update error');
     res.status(500).json({ error: { code: 'INTERNAL_ERROR', message, requestId } });
   }
 });

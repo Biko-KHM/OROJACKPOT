@@ -23,6 +23,9 @@ import {
   Edit3,
   Video,
   Eye,
+  Ticket,
+  ExternalLink,
+  Radio,
 } from 'lucide-react';
 import { api, ApiError } from '../../api/client.js';
 import { AdminLottery, PaymentAccount, StructuredPaymentInstructions } from '../../types/index.js';
@@ -221,6 +224,8 @@ export const CampaignsView: React.FC<CampaignsViewProps> = ({ onInspectInventory
   const [manualDrawLottery, setManualDrawLottery] = useState<AdminLottery | null>(null);
   const [drawWinningNumber, setDrawWinningNumber] = useState('');
   const [drawPrizeLabel, setDrawPrizeLabel] = useState('');
+  const [drawLiveUrl, setDrawLiveUrl] = useState('');
+  const [isSavingLiveUrl, setIsSavingLiveUrl] = useState(false);
   const [drawVideoFile, setDrawVideoFile] = useState<File | null>(null);
   const [isSubmittingDraw, setIsSubmittingDraw] = useState(false);
   const [drawSubmitError, setDrawSubmitError] = useState<string | null>(null);
@@ -487,28 +492,6 @@ export const CampaignsView: React.FC<CampaignsViewProps> = ({ onInspectInventory
     }
   };
 
-  const handlePurgePayments = async (id: string, title: string) => {
-    const isAll = window.confirm(
-      `Erase and reset payments for SINGLE CAMPAIGN: "${title}"?\n\n• This overload relief action affects ONLY this single campaign.\n• All other campaigns remain completely untouched.\n• Click OK to proceed or Cancel to abort.`,
-    );
-    if (!isAll) return;
-
-    const confirmTyped = window.prompt(`Type "PURGE" to confirm erasing payments only for single campaign "${title}":`);
-    if (confirmTyped?.toUpperCase() !== 'PURGE') return;
-
-    setActionLoadingId(id);
-    setActionSuccess(null);
-    try {
-      const res = await api.purgeCampaignPayments(id, 'ALL');
-      setActionSuccess(res.message);
-      await fetchCampaigns();
-    } catch (err) {
-      alert(err instanceof Error ? err.message : 'Failed to purge campaign payments');
-    } finally {
-      setActionLoadingId(null);
-    }
-  };
-
   const handleCancel = async (id: string) => {
     const reason = window.prompt('Enter reason for cancelling this campaign (creates refund records):');
     if (!reason) return;
@@ -558,9 +541,25 @@ export const CampaignsView: React.FC<CampaignsViewProps> = ({ onInspectInventory
     setManualDrawLottery(camp);
     setDrawWinningNumber('');
     setDrawPrizeLabel(camp.prizeDescription || '');
+    setDrawLiveUrl(camp.drawLiveUrl || '');
     setDrawVideoFile(null);
     setDrawSubmitError(null);
     setDrawUploadProgress(null);
+  };
+
+  const handleSaveLiveUrlOnly = async () => {
+    if (!manualDrawLottery) return;
+    setIsSavingLiveUrl(true);
+    setDrawSubmitError(null);
+    try {
+      await api.setLotteryLiveStream(manualDrawLottery.id, drawLiveUrl.trim());
+      setActionSuccess(`🔴 Live stream link updated for "${manualDrawLottery.title}"! Mini app customers can now watch the draw live.`);
+      await fetchCampaigns();
+    } catch (err: unknown) {
+      setDrawSubmitError(err instanceof Error ? err.message : 'Failed to save live stream URL');
+    } finally {
+      setIsSavingLiveUrl(false);
+    }
   };
 
   const handleManualDrawSubmit = async (e: React.FormEvent) => {
@@ -600,6 +599,7 @@ export const CampaignsView: React.FC<CampaignsViewProps> = ({ onInspectInventory
         winningNumber: winningNum,
         prizeLabel: drawPrizeLabel.trim() || undefined,
         drawVideoUrl: uploadedKey,
+        drawLiveUrl: drawLiveUrl.trim() || undefined,
       });
 
       setActionSuccess(`🎉 Manual draw completed for "${manualDrawLottery.title}"! Winner ticket #${winningNum} announced.`);
@@ -959,20 +959,59 @@ export const CampaignsView: React.FC<CampaignsViewProps> = ({ onInspectInventory
                   </div>
                 </div>
 
-                {/* Campaign Meta Chips */}
-                <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-300 font-medium pt-1">
-                  <span className="px-2.5 py-1 rounded-xl bg-slate-800/80 border border-slate-700/60">
-                    Range: #{camp.numberStart} – #{camp.numberEnd} ({totalNumbers.toLocaleString()} total)
-                  </span>
-                  <span className="px-2.5 py-1 rounded-xl bg-slate-800/80 border border-slate-700/60">
-                    Max / Purchase: {camp.maxNumbersPerPurchase}
-                  </span>
-                  <span className="px-2.5 py-1 rounded-xl bg-slate-800/80 border border-slate-700/60">
-                    Hold Time: {camp.holdMinutes} min
-                  </span>
-                  <span className="px-2.5 py-1 rounded-xl bg-slate-800/80 border border-slate-700/60">
-                    Slug: /{camp.slug}
-                  </span>
+                {/* Organized Campaign Parameters Matrix */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1 text-[11px]">
+                  <div className="bg-[#131923] border border-[#1a2230] rounded-xl p-2.5 flex flex-col justify-center">
+                    <span className="text-[10px] text-slate-400 font-medium flex items-center gap-1.5">
+                      <Ticket className="w-3 h-3 text-[#00d26a]" />
+                      <span>Ticket Range</span>
+                    </span>
+                    <span className="font-bold text-white font-mono mt-0.5 text-xs truncate">
+                      #{camp.numberStart} – #{camp.numberEnd}
+                    </span>
+                    <span className="text-[9.5px] text-slate-400">
+                      {totalNumbers.toLocaleString()} tickets total
+                    </span>
+                  </div>
+
+                  <div className="bg-[#131923] border border-[#1a2230] rounded-xl p-2.5 flex flex-col justify-center">
+                    <span className="text-[10px] text-slate-400 font-medium flex items-center gap-1.5">
+                      <Layers className="w-3 h-3 text-indigo-400" />
+                      <span>Max Purchase</span>
+                    </span>
+                    <span className="font-bold text-white font-mono mt-0.5 text-xs">
+                      {camp.maxNumbersPerPurchase} tickets
+                    </span>
+                    <span className="text-[9.5px] text-slate-400">
+                      per transaction
+                    </span>
+                  </div>
+
+                  <div className="bg-[#131923] border border-[#1a2230] rounded-xl p-2.5 flex flex-col justify-center">
+                    <span className="text-[10px] text-slate-400 font-medium flex items-center gap-1.5">
+                      <Clock className="w-3 h-3 text-amber-400" />
+                      <span>Hold Timeout</span>
+                    </span>
+                    <span className="font-bold text-white font-mono mt-0.5 text-xs">
+                      {camp.holdMinutes} minutes
+                    </span>
+                    <span className="text-[9.5px] text-slate-400">
+                      auto-release timer
+                    </span>
+                  </div>
+
+                  <div className="bg-[#131923] border border-[#1a2230] rounded-xl p-2.5 flex flex-col justify-center">
+                    <span className="text-[10px] text-slate-400 font-medium flex items-center gap-1.5">
+                      <ExternalLink className="w-3 h-3 text-sky-400" />
+                      <span>Campaign Slug</span>
+                    </span>
+                    <span className="font-bold text-emerald-400 font-mono mt-0.5 text-xs truncate">
+                      /{camp.slug}
+                    </span>
+                    <span className="text-[9.5px] text-slate-400">
+                      mini app link path
+                    </span>
+                  </div>
                 </div>
 
                 {/* Action Bar */}
@@ -1064,19 +1103,6 @@ export const CampaignsView: React.FC<CampaignsViewProps> = ({ onInspectInventory
                       >
                         {isBusy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
                         <span>Sync Channel</span>
-                      </button>
-                    )}
-
-                    {/* Erase Payments (Overload Reset) */}
-                    {['OPEN', 'PAUSED', 'CLOSED'].includes(camp.status) && (
-                      <button
-                        onClick={() => void handlePurgePayments(camp.id, camp.title)}
-                        disabled={isBusy}
-                        title="Erase payments and restore ticket numbers to AVAILABLE in case of system overload"
-                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-rose-950/40 hover:bg-rose-900/60 text-rose-300 border border-rose-800/50 text-xs font-bold transition-colors disabled:opacity-50"
-                      >
-                        <Trash2 className="w-3.5 h-3.5 text-rose-400" />
-                        <span>Erase Payments</span>
                       </button>
                     )}
 
@@ -1965,6 +1991,36 @@ export const CampaignsView: React.FC<CampaignsViewProps> = ({ onInspectInventory
                     placeholder="e.g. 1st Grand Prize (Car)"
                     className="w-full px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-amber-500 transition-colors"
                   />
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
+                      <Radio className="w-3.5 h-3.5 text-rose-400 animate-pulse" />
+                      <span>Live Draw Stream Link (TikTok, YouTube, Facebook Live)</span>
+                      <span className="text-slate-500 font-normal text-[10px]">(Optional)</span>
+                    </label>
+                    {drawLiveUrl.trim() && (
+                      <button
+                        type="button"
+                        onClick={() => void handleSaveLiveUrlOnly()}
+                        disabled={isSavingLiveUrl || isSubmittingDraw}
+                        className="text-[10px] px-2.5 py-0.5 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/40 font-bold transition-all active:scale-95 disabled:opacity-50"
+                      >
+                        {isSavingLiveUrl ? 'Saving...' : 'Broadcast Live Link Now'}
+                      </button>
+                    )}
+                  </div>
+                  <input
+                    type="url"
+                    value={drawLiveUrl}
+                    onChange={(e) => setDrawLiveUrl(e.target.value)}
+                    placeholder="e.g. https://www.tiktok.com/@orojackpot/live or https://youtube.com/live/..."
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-rose-500 transition-colors"
+                  />
+                  <p className="text-[10px] text-slate-500 mt-1">
+                    If this chance is being drawn on TikTok or social live, paste the link here. Mini app users can click &quot;View the Draw Process / Watch Live&quot; to tune in.
+                  </p>
                 </div>
 
                 <div>

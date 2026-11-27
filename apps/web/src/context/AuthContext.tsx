@@ -19,6 +19,7 @@ interface TelegramWebApp {
   expand: () => void;
   close: () => void;
   ready: () => void;
+  openLink?: (url: string, options?: { try_instant_view?: boolean }) => void;
   isVerticalSwipesEnabled?: boolean;
   enableClosingConfirmation?: () => void;
   disableClosingConfirmation?: () => void;

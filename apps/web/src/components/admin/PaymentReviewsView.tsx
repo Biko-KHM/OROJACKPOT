@@ -714,7 +714,6 @@ export const PaymentReviewsView: React.FC = () => {
                 <th className="py-2.5 px-3 whitespace-nowrap">Tickets & Total</th>
                 <th className="py-2.5 px-3 whitespace-nowrap">Status & Flags</th>
                 <th className="py-2.5 px-3 whitespace-nowrap">Submitted At</th>
-                <th className="py-2.5 px-3 text-right whitespace-nowrap">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#1a2230]/70 text-[10px] sm:text-[10.5px]">
@@ -726,27 +725,46 @@ export const PaymentReviewsView: React.FC = () => {
                     key={sub.id}
                     className="hover:bg-[#131923]/60 transition-colors"
                   >
-                    {/* Customer */}
-                    <td className="py-2 px-3 align-middle">
-                      <div className="space-y-0.5">
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className="font-bold text-white text-xs">
-                            {sub.reservation.customerUsername ? `@${sub.reservation.customerUsername}` : 'Buyer'}
-                          </span>
-                        </div>
-                        <div className="text-[10px] text-slate-400 flex items-center gap-1.5 flex-wrap">
-                          <span className="text-slate-500 text-[9.5px] font-mono">
-                            TG: {sub.reservation.customerTelegramId}
-                          </span>
-                          <span className="text-slate-400 text-[9.5px] font-mono">
-                            {sub.reservation.publicReference}
-                          </span>
-                          {sub.paymentReference && (
-                            <span className="text-amber-400/90 text-[9.5px] font-mono">
-                              {sub.paymentReference}
+                    {/* Customer & Instant Review Action */}
+                    <td className="py-2.5 px-3 align-middle">
+                      <div className="flex items-center justify-between gap-3 min-w-[270px]">
+                        <div className="space-y-0.5 min-w-0">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="font-bold text-white text-xs truncate max-w-[140px]">
+                              {sub.reservation.customerUsername ? `@${sub.reservation.customerUsername}` : 'Buyer'}
                             </span>
-                          )}
+                          </div>
+                          <div className="text-[10px] text-slate-400 flex items-center gap-1.5 flex-wrap">
+                            <span className="text-slate-500 text-[9.5px] font-mono">
+                              TG: {sub.reservation.customerTelegramId}
+                            </span>
+                            <span className="text-slate-400 text-[9.5px] font-mono">
+                              {sub.reservation.publicReference}
+                            </span>
+                            {sub.paymentReference && (
+                              <span className="text-amber-400/90 text-[9.5px] font-mono">
+                                {sub.paymentReference}
+                              </span>
+                            )}
+                          </div>
                         </div>
+
+                        {/* Review Submission Button placed directly next to the Customer name for easy access without scrolling */}
+                        <button
+                          type="button"
+                          onClick={() => void handleOpenReview(sub)}
+                          aria-label={sub.status === 'SUBMITTED' ? 'Review Submission' : 'View Details'}
+                          className={`inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-extrabold transition-all shadow-md active:scale-95 shrink-0 ${
+                            sub.status === 'SUBMITTED'
+                              ? 'bg-[#00d26a] hover:bg-[#00bf60] text-black border border-[#00d26a] shadow-[0_2px_10px_rgba(0,210,106,0.3)]'
+                              : 'bg-[#131923] hover:bg-[#1a2230] text-slate-200 border border-[#1a2230]'
+                          }`}
+                        >
+                          <Eye className="w-3.5 h-3.5 shrink-0" />
+                          <span className="whitespace-nowrap">
+                            {sub.status === 'SUBMITTED' ? 'Review Submission' : 'View Details'}
+                          </span>
+                        </button>
                       </div>
                     </td>
 
@@ -833,22 +851,6 @@ export const PaymentReviewsView: React.FC = () => {
                           minute: '2-digit',
                         })}
                       </span>
-                    </td>
-
-                    {/* Actions - Minimized & Consistent with Emerald Identity */}
-                    <td className="py-2 px-3 text-right align-middle">
-                      <button
-                        onClick={() => void handleOpenReview(sub)}
-                        aria-label={sub.status === 'SUBMITTED' ? 'Review Submission' : 'View Details'}
-                        className={`inline-flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-lg text-[10px] font-bold transition-all shadow-sm active:scale-95 shrink-0 ${
-                          sub.status === 'SUBMITTED'
-                            ? 'bg-[#0c251b] hover:bg-[#123c2a] text-emerald-400 border border-[#123c2a] hover:border-emerald-500/50 shadow-emerald-950/20'
-                            : 'bg-[#131923] hover:bg-[#1a2230] text-slate-300 border border-[#1a2230]'
-                        }`}
-                      >
-                        <Eye className="w-3 h-3 text-emerald-400 shrink-0" />
-                        <span className="whitespace-nowrap">{sub.status === 'SUBMITTED' ? 'Review Submission' : 'View Details'}</span>
-                      </button>
                     </td>
                   </tr>
                 );

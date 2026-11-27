@@ -160,6 +160,10 @@ class MockTelegramClient implements ITelegramClient {
     };
   }
 
+  async deleteMessage(_chatId: string | number | bigint, _messageId: number | bigint): Promise<boolean> {
+    return true;
+  }
+
   reset() {
     this.sentMessages = [];
     this.editedMessages = [];

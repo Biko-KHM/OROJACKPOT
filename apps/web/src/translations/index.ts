@@ -50,6 +50,9 @@ export const translations = {
     verifyFairDraw: 'Verify Provably Fair',
     drawSecurityNotice: 'Winner selection is calculated strictly server-side using cryptographic HMAC-SHA256 rejection sampling to eliminate modulo bias and manipulation.',
     youWonThisDraw: 'YOU ARE THE WINNER!',
+    viewLiveDraw: 'Watch Live Draw',
+    viewDrawProcess: 'View Draw Process',
+    liveDrawPreparingNotice: 'The live draw stream is being prepared! When the host goes live on TikTok or social media, the direct stream link will appear right here.',
 
     // Number Grid
     pickNumbers: 'Select Your Numbers',
@@ -172,6 +175,9 @@ export const translations = {
     verifyFairDraw: 'Qajeelummaa Mirkaneessi',
     drawSecurityNotice: 'Filannoon mo\'ataa sirna kireeptoogiraafii amansiisaa ta\'een serverii irratti raawwatama.',
     youWonThisDraw: 'ISIN MO\'ATTAN!',
+    viewLiveDraw: 'Kallattiin Hordofaa (TikTok)',
+    viewDrawProcess: 'Adeemsa Baafama Carraa Ilaalaa',
+    liveDrawPreparingNotice: 'Tamsaasi kallattii qophaa\'aa jira! Qophiin TikTok irratti yoo eegale liinkiin kallattii as irratti argama.',
 
     // Number Grid
     pickNumbers: 'Lakkoofsa Keessan Filadhaa',
@@ -294,6 +300,9 @@ export const translations = {
     verifyFairDraw: 'ፍትሃዊነትን አረጋግጥ',
     drawSecurityNotice: 'የአሸናፊው ምርጫ በአስተማማኝ ሰርቨር ክሪፕቶግራፊክ አልጎሪዝም ብቻ ይከናወናል።',
     youWonThisDraw: 'እርስዎ አሸንፈዋል!',
+    viewLiveDraw: 'በቀጥታ ይመልከቱ (ቲክቶክ)',
+    viewDrawProcess: 'የዕጣ ማውጣት ሂደቱን ይመልከቱ',
+    liveDrawPreparingNotice: 'የቀጥታ ስርጭት ዕጣ እየተዘጋጀ ነው! የቲክቶክ የቀጥታ ስርጭት እንደጀመረ ሊንኩ እዚህ ይታያል።',
 
     // Number Grid
     pickNumbers: 'ቁጥሮችዎን ይምረጡ',

@@ -14,6 +14,8 @@ import {
   PartyPopper,
   Lock,
   Video,
+  Radio,
+  ExternalLink,
 } from 'lucide-react';
 import { CampaignSummary } from '../types/index.js';
 import { api } from '../api/client.js';
@@ -38,6 +40,19 @@ const getInitialCachedCampaigns = (): CampaignSummary[] => {
     // ignore
   }
   return [];
+};
+
+const openExternalLink = (url: string) => {
+  try {
+    const tg = (window as unknown as { Telegram?: { WebApp?: { openLink?: (u: string) => void } } })?.Telegram?.WebApp;
+    if (tg?.openLink) {
+      tg.openLink(url);
+      return;
+    }
+  } catch {
+    // fallback
+  }
+  window.open(url, '_blank', 'noopener,noreferrer');
 };
 
 interface CampaignListProps {
@@ -203,7 +218,7 @@ export const CampaignList: React.FC<CampaignListProps> = ({ onSelectCampaign }) 
           <div className="flex items-center gap-3.5">
             <div className="relative w-12 h-12 sm:w-14 sm:h-14 rounded-2xl overflow-hidden p-0.5 bg-gradient-to-tr from-[#00d26a]/60 via-amber-400/40 to-[#00d26a]/50 shadow-lg shadow-[#00d26a]/20 shrink-0">
               <img
-                src="/logo.png"
+                src="/logojackpot.jpg"
                 alt="HIREE Lottery"
                 loading="eager"
                 decoding="async"
@@ -440,25 +455,65 @@ export const CampaignList: React.FC<CampaignListProps> = ({ onSelectCampaign }) 
                 {/* Perforated divider */}
                 <div className="ticket-notch-divider" />
 
-                {/* Bottom Row: Security Assurance & Check Results */}
-                <div className="flex items-center justify-between gap-2 pt-1 relative z-10">
+                {/* Bottom Row: Security Assurance & Watch Live / View Draw Process & Check Results */}
+                <div className="flex flex-wrap items-center justify-between gap-2 pt-1 relative z-10">
                   <span className="text-[10.5px] text-fulus-muted flex items-center gap-1">
                     <ShieldCheck className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
                     <span>Cryptographic Snapshot Locked</span>
                   </span>
 
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      triggerHaptic('light');
-                      void fetchCampaigns();
-                    }}
-                    className="py-2 px-3 rounded-xl bg-cyan-500/15 hover:bg-cyan-500/25 border border-cyan-500/30 text-cyan-300 text-xs font-bold flex items-center gap-1.5 transition-colors active:scale-95 shadow-sm"
-                  >
-                    <RefreshCw className="w-3 h-3" />
-                    <span>Check Results</span>
-                  </button>
+                  <div className="flex items-center gap-2">
+                    {camp.drawLiveUrl ? (
+                      <a
+                        href={camp.drawLiveUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          e.preventDefault();
+                          triggerHaptic('medium');
+                          openExternalLink(camp.drawLiveUrl!);
+                        }}
+                        className="py-1.5 px-3 rounded-xl bg-gradient-to-r from-rose-600/30 to-pink-600/30 hover:from-rose-600/40 hover:to-pink-600/40 border border-rose-500/40 text-rose-200 text-xs font-black flex items-center gap-1.5 transition-all active:scale-95 shadow-md shadow-rose-900/20"
+                        title="Watch the live draw on TikTok / social media"
+                      >
+                        <span className="relative flex h-2 w-2">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-500"></span>
+                        </span>
+                        <span>{t('viewLiveDraw')}</span>
+                        <ExternalLink className="w-3 h-3 text-rose-300" />
+                      </a>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          triggerHaptic('light');
+                          alert(t('liveDrawPreparingNotice'));
+                        }}
+                        className="py-1.5 px-3 rounded-xl bg-cyan-500/15 hover:bg-cyan-500/25 border border-cyan-500/30 text-cyan-300 text-xs font-bold flex items-center gap-1.5 transition-colors active:scale-95 shadow-sm"
+                        title="View the draw process"
+                      >
+                        <Radio className="w-3.5 h-3.5 text-cyan-400 animate-pulse" />
+                        <span>{t('viewDrawProcess')}</span>
+                      </button>
+                    )}
+
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        triggerHaptic('light');
+                        void fetchCampaigns();
+                      }}
+                      className="py-1.5 px-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700 text-slate-300 text-xs font-bold flex items-center gap-1 transition-colors active:scale-95"
+                      title="Check latest results"
+                    >
+                      <RefreshCw className="w-3 h-3" />
+                      <span className="hidden sm:inline">Refresh</span>
+                    </button>
+                  </div>
                 </div>
               </div>
             );
@@ -779,6 +834,26 @@ export const CampaignList: React.FC<CampaignListProps> = ({ onSelectCampaign }) 
                   The manual draw has concluded! The administrator is uploading the video evidence to Telegram. Please check back shortly.
                 </p>
               </div>
+            )}
+
+            {/* Live Stream / TikTok Recording Link if available */}
+            {verifyDrawCampaign.drawLiveUrl && (
+              <a
+                href={verifyDrawCampaign.drawLiveUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => {
+                  e.preventDefault();
+                  openExternalLink(verifyDrawCampaign.drawLiveUrl!);
+                }}
+                className="flex items-center justify-between p-3 rounded-xl bg-rose-950/30 border border-rose-900/40 text-rose-300 hover:bg-rose-950/50 text-xs font-semibold transition-colors"
+              >
+                <div className="flex items-center gap-2">
+                  <Radio className="w-4 h-4 text-rose-400" />
+                  <span>Original Live Stream (TikTok / Social)</span>
+                </div>
+                <ExternalLink className="w-3.5 h-3.5 text-rose-400" />
+              </a>
             )}
 
             {/* Close Button */}

@@ -11,7 +11,7 @@ export const AboutView: React.FC = () => {
       <div className="fulus-card p-6 space-y-4">
         <div className="flex items-center gap-3.5">
           <div className="relative w-12 h-12 rounded-2xl overflow-hidden p-0.5 bg-gradient-to-tr from-[#00d26a]/50 via-amber-400/30 to-[#00d26a]/40 shadow-lg shadow-[#00d26a]/20 shrink-0">
-            <img src="/logo.png" alt="HIREE" className="w-full h-full object-cover rounded-[14px]" />
+            <img src="/logojackpot.jpg" alt="OROJACKPOT" className="w-full h-full object-cover rounded-[14px]" />
           </div>
           <div>
             <h2 className="text-lg font-black text-white tracking-tight">{t('appTitle')}</h2>

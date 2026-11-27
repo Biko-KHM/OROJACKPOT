@@ -9,9 +9,16 @@ export interface ReconcileResult {
 }
 
 /**
- * Reconciles active campaigns with the Telegram channel progress posts every 10 minutes.
+ * Channel reconciliation worker: Automatic background channel editing is disabled
+ * so that Telegram Channel posts are ONLY synchronized when the administrator explicitly
+ * clicks the "Sync Channel" button on the campaign card.
  */
 export async function reconcileChannelPosts(): Promise<ReconcileResult> {
+  if (process.env.NODE_ENV !== 'test') {
+    logger.debug('Channel reconciliation job skipped: synchronization is strictly controlled via manual "Sync Channel" action');
+    return { checkedCount: 0, updatedCount: 0 };
+  }
+
   const result: ReconcileResult = {
     checkedCount: 0,
     updatedCount: 0,
@@ -37,11 +44,6 @@ export async function reconcileChannelPosts(): Promise<ReconcileResult> {
       logger.warn({ err, lotteryId: lottery.id }, 'Channel reconciliation skipped for lottery');
     }
   }
-
-  logger.info(
-    { checked: result.checkedCount, updated: result.updatedCount },
-    'Channel reconciliation job finished',
-  );
 
   return result;
 }

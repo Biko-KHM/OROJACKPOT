@@ -162,7 +162,7 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({
         <div className="text-center mb-6 sm:mb-8">
           <div className="relative w-20 h-20 mx-auto mb-4 rounded-3xl p-1 bg-gradient-to-tr from-[#00d26a]/40 via-amber-400/30 to-[#00d26a]/40 shadow-xl shadow-[#00d26a]/20">
             <img
-              src="/logo.png"
+              src="/logojackpot.jpg"
               alt="OROJACKPOT"
               className="w-full h-full object-cover rounded-[22px] shadow-inner"
             />

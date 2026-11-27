@@ -782,13 +782,26 @@ export const api = {
 
   async completeManualDraw(
     lotteryId: string,
-    payload: { winningNumber: number; prizeLabel?: string; drawVideoUrl?: string },
+    payload: { winningNumber: number; prizeLabel?: string; drawVideoUrl?: string; drawLiveUrl?: string },
   ): Promise<{ success: boolean; lottery: AdminLottery; draw: any }> {
     return request<{ success: boolean; lottery: AdminLottery; draw: any }>(
       `/admin/lotteries/${lotteryId}/manual-draw`,
       {
         method: 'POST',
         body: JSON.stringify(payload),
+      },
+    );
+  },
+
+  async setLotteryLiveStream(
+    lotteryId: string,
+    drawLiveUrl: string,
+  ): Promise<{ success: boolean; lottery: AdminLottery }> {
+    return request<{ success: boolean; lottery: AdminLottery }>(
+      `/admin/lotteries/${lotteryId}/live-stream`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ drawLiveUrl }),
       },
     );
   },

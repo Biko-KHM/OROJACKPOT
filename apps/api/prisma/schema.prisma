@@ -103,6 +103,7 @@ model Lottery {
   prizeDescription      String        @map("prize_description")
   imageUrl              String?       @map("image_url")
   drawVideoUrl          String?       @map("draw_video_url")
+  drawLiveUrl           String?       @map("draw_live_url")
   status                LotteryStatus @default(DRAFT)
   currency              String        @default("ETB") @db.Char(3)
   ticketPriceMinor      BigInt        @map("ticket_price_minor")

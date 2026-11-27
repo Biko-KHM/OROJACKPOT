@@ -581,6 +581,7 @@ export async function updateLottery(
         startsAt: data.startsAt !== undefined ? (data.startsAt ? new Date(data.startsAt) : null) : lottery.startsAt,
         endsAt: data.endsAt !== undefined ? (data.endsAt ? new Date(data.endsAt) : null) : lottery.endsAt,
         imageUrl: data.imageUrl !== undefined ? data.imageUrl : lottery.imageUrl,
+        drawLiveUrl: data.drawLiveUrl !== undefined ? data.drawLiveUrl : lottery.drawLiveUrl,
         paymentInstructions:
           data.paymentInstructions !== undefined
             ? data.paymentInstructions
@@ -820,13 +821,14 @@ export async function getLotteryNumbersSummary(lotteryId: string): Promise<Lotte
   return summaryResult;
 }
 
-// 12. Complete Manual Offline Draw (Superadmin / Admin finishes campaign with manual winning number & draw video)
+// 12. Complete Manual Offline Draw (Superadmin / Admin finishes campaign with manual winning number & draw video / live link)
 export async function completeManualDraw({
   lotteryId,
   adminUserId,
   winningNumber,
   prizeLabel,
   drawVideoUrl,
+  drawLiveUrl,
   requestId,
 }: {
   lotteryId: string;
@@ -834,6 +836,7 @@ export async function completeManualDraw({
   winningNumber: number;
   prizeLabel?: string;
   drawVideoUrl?: string;
+  drawLiveUrl?: string;
   requestId?: string;
 }) {
   const lottery = await prisma.lottery.findUnique({ where: { id: lotteryId } });
@@ -873,16 +876,18 @@ export async function completeManualDraw({
         winningNumber,
         completedAt: new Date().toISOString(),
         hasDrawVideo: Boolean(drawVideoUrl),
+        drawLiveUrl: drawLiveUrl || null,
       },
     },
   });
 
-  // Mark lottery COMPLETED and record drawVideoUrl
+  // Mark lottery COMPLETED and record drawVideoUrl and drawLiveUrl
   const updatedLottery = await prisma.lottery.update({
     where: { id: lotteryId },
     data: {
       status: LotteryStatus.COMPLETED,
       ...(drawVideoUrl ? { drawVideoUrl } : {}),
+      ...(drawLiveUrl !== undefined ? { drawLiveUrl: drawLiveUrl.trim() || null } : {}),
     },
   });
 
@@ -904,6 +909,7 @@ export async function completeManualDraw({
         prizeLabel: label,
         drawId: draw.id,
         drawVideoUrl: drawVideoUrl || null,
+        drawLiveUrl: drawLiveUrl || null,
         requestId,
       },
     },
@@ -957,6 +963,31 @@ export async function updateLotteryDrawVideo(lotteryId: string, drawVideoUrl: st
   return serializeLottery(updated);
 }
 
+// 14. Update Lottery Live Stream URL (Set TikTok / Social Live link during draw process)
+export async function updateLotteryDrawLiveUrl(lotteryId: string, drawLiveUrl: string, adminUserId: string) {
+  const lottery = await prisma.lottery.findUnique({ where: { id: lotteryId } });
+  if (!lottery) {
+    throw new LotteryError('NOT_FOUND', 'Campaign not found.', 404);
+  }
+  const updated = await prisma.lottery.update({
+    where: { id: lotteryId },
+    data: { drawLiveUrl: drawLiveUrl.trim() || null },
+  });
+  await cache.del(CACHE_KEYS.LOTTERY(lotteryId));
+  await cache.del(CACHE_KEYS.OPEN_LOTTERIES);
+  await cache.del(CACHE_KEYS.ALL_LOTTERIES);
+  await prisma.auditLog.create({
+    data: {
+      actorUserId: adminUserId,
+      action: 'LOTTERY_DRAW_LIVE_URL_UPDATED',
+      entityType: 'LOTTERY',
+      entityId: lotteryId,
+      details: { drawLiveUrl: drawLiveUrl.trim() || null },
+    },
+  });
+  return serializeLottery(updated);
+}
+
 // Helper: Serializes BigInt values into strings for JSON response
 function serializeLottery(lottery: {
   id: string;
@@ -966,6 +997,7 @@ function serializeLottery(lottery: {
   prizeDescription: string;
   imageUrl?: string | null;
   drawVideoUrl?: string | null;
+  drawLiveUrl?: string | null;
   status: LotteryStatus;
   currency: string;
   ticketPriceMinor: bigint;

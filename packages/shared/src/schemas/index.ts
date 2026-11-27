@@ -91,6 +91,7 @@ export const CreateLotteryRequestSchema = z.object({
     })
     .optional()
     .nullable(),
+  drawLiveUrl: z.string().max(2000).optional().nullable(),
 }).refine((data) => data.numberEnd >= data.numberStart, {
   message: 'numberEnd must be greater than or equal to numberStart',
   path: ['numberEnd'],
@@ -118,6 +119,7 @@ export const UpdateLotteryRequestSchema = z.object({
     })
     .optional()
     .nullable(),
+  drawLiveUrl: z.string().max(2000).optional().nullable(),
 });
 export type UpdateLotteryRequest = z.infer<typeof UpdateLotteryRequestSchema>;
 
