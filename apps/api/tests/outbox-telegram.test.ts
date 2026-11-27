@@ -12,6 +12,7 @@ import {
   TelegramRateLimitError,
 } from '../src/modules/telegram/client.js';
 import { updateDeduplicator } from '../src/modules/telegram/service.js';
+import { updatePlatformSettingsState } from '../src/modules/platform/settings.js';
 import { processOutboxBatch } from '../src/worker/outboxProcessor.js';
 import { reconcileChannelPosts } from '../src/worker/reconcileChannel.js';
 import {
@@ -223,6 +224,7 @@ describe('Step 8: Outbox, Bot, and Channel Integration Tests', () => {
   }
 
   beforeAll(async () => {
+    updatePlatformSettingsState({ telegramChannelId: '-1001234567890' });
     (config as { TELEGRAM_CHANNEL_ID?: string }).TELEGRAM_CHANNEL_ID = '-1001234567890';
     setTelegramClient(mockTelegram);
 
