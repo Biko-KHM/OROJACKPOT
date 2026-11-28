@@ -491,15 +491,29 @@ export const api = {
     });
   },
 
-  // 13. Admin Overview KPIs
-  async getAdminOverview(): Promise<AdminOverview> {
-    return request<AdminOverview>('/admin/overview');
+  // 13. Admin Overview KPIs (Accelerated with in-memory SWR cache for 0ms transitions)
+  async getAdminOverview(options?: { forceRefresh?: boolean }): Promise<AdminOverview> {
+    const cacheKey = 'admin_overview';
+    if (!options?.forceRefresh) {
+      const cached = getCached<AdminOverview>(cacheKey, 15000);
+      if (cached) return cached;
+    }
+    const data = await request<AdminOverview>('/admin/overview');
+    setCached(cacheKey, data);
+    return data;
   },
 
-  // 14. Admin Campaigns
-  async getAdminLotteries(status?: string): Promise<AdminLottery[]> {
+  // 14. Admin Campaigns (Accelerated with in-memory SWR cache for 0ms transitions)
+  async getAdminLotteries(status?: string, options?: { forceRefresh?: boolean }): Promise<AdminLottery[]> {
     const query = status && status !== 'ALL' ? `?status=${status}` : '';
-    return request<AdminLottery[]>(`/admin/lotteries${query}`);
+    const cacheKey = `admin_lotteries_${status || 'ALL'}`;
+    if (!options?.forceRefresh) {
+      const cached = getCached<AdminLottery[]>(cacheKey, 15000);
+      if (cached) return cached;
+    }
+    const data = await request<AdminLottery[]>(`/admin/lotteries${query}`);
+    setCached(cacheKey, data);
+    return data;
   },
 
   async createAdminLottery(payload: {
@@ -517,10 +531,14 @@ export const api = {
     paymentInstructions?: string;
     imageUrl?: string | null;
   }): Promise<AdminLottery> {
-    return request<AdminLottery>('/admin/lotteries', {
+    const res = await request<AdminLottery>('/admin/lotteries', {
       method: 'POST',
       body: JSON.stringify(payload),
     });
+    clearClientCache('admin_lotteries');
+    clearClientCache('admin_overview');
+    clearClientCache('open_campaigns');
+    return res;
   },
 
   async updateAdminLottery(
@@ -538,10 +556,14 @@ export const api = {
       imageUrl?: string | null;
     },
   ): Promise<AdminLottery> {
-    return request<AdminLottery>(`/admin/lotteries/${id}`, {
+    const res = await request<AdminLottery>(`/admin/lotteries/${id}`, {
       method: 'PATCH',
       body: JSON.stringify(payload),
     });
+    clearClientCache('admin_lotteries');
+    clearClientCache('admin_overview');
+    clearClientCache('open_campaigns');
+    return res;
   },
 
   async uploadCampaignImage(
@@ -741,34 +763,62 @@ export const api = {
   },
 
   async publishLottery(id: string): Promise<AdminLottery> {
-    return request<AdminLottery>(`/admin/lotteries/${id}/publish`, { method: 'POST' });
+    const res = await request<AdminLottery>(`/admin/lotteries/${id}/publish`, { method: 'POST' });
+    clearClientCache('admin_lotteries');
+    clearClientCache('admin_overview');
+    clearClientCache('open_campaigns');
+    return res;
   },
 
   async pauseLottery(id: string): Promise<AdminLottery> {
-    return request<AdminLottery>(`/admin/lotteries/${id}/pause`, { method: 'POST' });
+    const res = await request<AdminLottery>(`/admin/lotteries/${id}/pause`, { method: 'POST' });
+    clearClientCache('admin_lotteries');
+    clearClientCache('admin_overview');
+    clearClientCache('open_campaigns');
+    return res;
   },
 
   async resumeLottery(id: string): Promise<AdminLottery> {
-    return request<AdminLottery>(`/admin/lotteries/${id}/resume`, { method: 'POST' });
+    const res = await request<AdminLottery>(`/admin/lotteries/${id}/resume`, { method: 'POST' });
+    clearClientCache('admin_lotteries');
+    clearClientCache('admin_overview');
+    clearClientCache('open_campaigns');
+    return res;
   },
 
   async closeLottery(id: string): Promise<AdminLottery> {
-    return request<AdminLottery>(`/admin/lotteries/${id}/close`, { method: 'POST' });
+    const res = await request<AdminLottery>(`/admin/lotteries/${id}/close`, { method: 'POST' });
+    clearClientCache('admin_lotteries');
+    clearClientCache('admin_overview');
+    clearClientCache('open_campaigns');
+    return res;
   },
 
   async cancelLottery(id: string, reason?: string): Promise<AdminLottery> {
-    return request<AdminLottery>(`/admin/lotteries/${id}/cancel`, {
+    const res = await request<AdminLottery>(`/admin/lotteries/${id}/cancel`, {
       method: 'POST',
       body: JSON.stringify({ reason: reason || 'Cancelled by admin' }),
     });
+    clearClientCache('admin_lotteries');
+    clearClientCache('admin_overview');
+    clearClientCache('open_campaigns');
+    return res;
   },
 
   async archiveLottery(id: string): Promise<AdminLottery> {
-    return request<AdminLottery>(`/admin/lotteries/${id}/archive`, { method: 'POST' });
+    const res = await request<AdminLottery>(`/admin/lotteries/${id}/archive`, { method: 'POST' });
+    clearClientCache('admin_lotteries');
+    clearClientCache('admin_overview');
+    clearClientCache('open_campaigns');
+    return res;
   },
 
   async deleteLottery(id: string): Promise<{ success: boolean; message: string }> {
-    return request<{ success: boolean; message: string }>(`/admin/lotteries/${id}`, { method: 'DELETE' });
+    const res = await request<{ success: boolean; message: string }>(`/admin/lotteries/${id}`, { method: 'DELETE' });
+    clearClientCache('admin_lotteries');
+    clearClientCache('admin_overview');
+    clearClientCache('open_campaigns');
+    return res;
   },
 
   async syncLotteryToChannel(
@@ -784,26 +834,33 @@ export const api = {
     lotteryId: string,
     payload: { winningNumber: number; prizeLabel?: string; drawVideoUrl?: string; drawLiveUrl?: string },
   ): Promise<{ success: boolean; lottery: AdminLottery; draw: any }> {
-    return request<{ success: boolean; lottery: AdminLottery; draw: any }>(
+    const res = await request<{ success: boolean; lottery: AdminLottery; draw: any }>(
       `/admin/lotteries/${lotteryId}/manual-draw`,
       {
         method: 'POST',
         body: JSON.stringify(payload),
       },
     );
+    clearClientCache('admin_lotteries');
+    clearClientCache('admin_overview');
+    clearClientCache('open_campaigns');
+    return res;
   },
 
   async setLotteryLiveStream(
     lotteryId: string,
     drawLiveUrl: string,
   ): Promise<{ success: boolean; lottery: AdminLottery }> {
-    return request<{ success: boolean; lottery: AdminLottery }>(
+    const res = await request<{ success: boolean; lottery: AdminLottery }>(
       `/admin/lotteries/${lotteryId}/live-stream`,
       {
         method: 'POST',
         body: JSON.stringify({ drawLiveUrl }),
       },
     );
+    clearClientCache('admin_lotteries');
+    clearClientCache('open_campaigns');
+    return res;
   },
 
   async uploadDrawVideo(
@@ -853,12 +910,13 @@ export const api = {
     return request<NumberInventoryItem[]>(`/admin/lotteries/${lotteryId}/inventory${query}`);
   },
 
-  // 16. Payment Review (Supports pagination with limit & page)
+  // 16. Payment Review (Accelerated with in-memory SWR cache for 0ms transitions)
   async getAdminSubmissions(
     status?: string,
     reservationId?: string,
     limit?: number,
     page?: number,
+    options?: { forceRefresh?: boolean },
   ): Promise<PaymentSubmissionReviewItem[]> {
     const params = new URLSearchParams();
     if (status) params.set('status', status);
@@ -866,7 +924,14 @@ export const api = {
     if (limit) params.set('limit', String(limit));
     if (page) params.set('page', String(page));
     const query = params.toString() ? `?${params.toString()}` : '';
-    return request<PaymentSubmissionReviewItem[]>(`/admin/payment-submissions${query}`);
+    const cacheKey = `admin_submissions_${query}`;
+    if (!options?.forceRefresh) {
+      const cached = getCached<PaymentSubmissionReviewItem[]>(cacheKey, 15000);
+      if (cached) return cached;
+    }
+    const data = await request<PaymentSubmissionReviewItem[]>(`/admin/payment-submissions${query}`);
+    setCached(cacheKey, data);
+    return data;
   },
 
   async getAdminSubmissionEvidenceUrl(
@@ -886,13 +951,16 @@ export const api = {
     comparedWithBankRecord: boolean,
     note?: string,
   ): Promise<{ success: boolean; status: string }> {
-    return request<{ success: boolean; status: string }>(
+    const res = await request<{ success: boolean; status: string }>(
       `/admin/payment-submissions/${submissionId}/approve`,
       {
         method: 'POST',
         body: JSON.stringify({ comparedWithBankRecord, note }),
       },
     );
+    clearClientCache('admin_submissions');
+    clearClientCache('admin_overview');
+    return res;
   },
 
   async rejectPaymentSubmission(
@@ -900,23 +968,30 @@ export const api = {
     reason: string,
     comparedWithBankRecord: boolean,
   ): Promise<{ success: boolean; status: string }> {
-    return request<{ success: boolean; status: string }>(
+    const res = await request<{ success: boolean; status: string }>(
       `/admin/payment-submissions/${submissionId}/reject`,
       {
         method: 'POST',
         body: JSON.stringify({ reason, comparedWithBankRecord }),
       },
     );
+    clearClientCache('admin_submissions');
+    clearClientCache('admin_overview');
+    return res;
   },
 
   async purgeCampaignPayments(
     lotteryId: string,
     mode: 'ALL' | 'PENDING_ONLY' = 'ALL',
   ): Promise<PurgeCampaignResult> {
-    return request<PurgeCampaignResult>('/admin/payment-submissions/purge-campaign', {
+    const res = await request<PurgeCampaignResult>('/admin/payment-submissions/purge-campaign', {
       method: 'POST',
       body: JSON.stringify({ lotteryId, mode }),
     });
+    clearClientCache('admin_submissions');
+    clearClientCache('admin_lotteries');
+    clearClientCache('admin_overview');
+    return res;
   },
 
   // 17. Reservations & Search
@@ -931,7 +1006,7 @@ export const api = {
     return request<AdminReservationItem[]>(`/admin/reservations${query}`);
   },
 
-  // 18. Customers
+  // 18. Customers (Accelerated with in-memory SWR cache for 0ms transitions)
   async getAdminCustomers(
     params?:
       | {
@@ -942,19 +1017,28 @@ export const api = {
         limit?: number;
       }
       | string,
+    options?: { forceRefresh?: boolean },
   ): Promise<AdminCustomerItem[]> {
+    let query = '';
     if (typeof params === 'string') {
-      const query = params ? `?search=${encodeURIComponent(params)}` : '';
-      return request<AdminCustomerItem[]>(`/admin/customers${query}`);
+      query = params ? `?search=${encodeURIComponent(params)}` : '';
+    } else if (params) {
+      const searchParams = new URLSearchParams();
+      if (params?.search) searchParams.set('search', params.search);
+      if (params?.status && params.status !== 'ALL') searchParams.set('status', params.status);
+      if (params?.sortBy) searchParams.set('sortBy', params.sortBy);
+      if (params?.sortOrder) searchParams.set('sortOrder', params.sortOrder);
+      if (params?.limit) searchParams.set('limit', params.limit.toString());
+      query = searchParams.toString() ? `?${searchParams.toString()}` : '';
     }
-    const searchParams = new URLSearchParams();
-    if (params?.search) searchParams.set('search', params.search);
-    if (params?.status && params.status !== 'ALL') searchParams.set('status', params.status);
-    if (params?.sortBy) searchParams.set('sortBy', params.sortBy);
-    if (params?.sortOrder) searchParams.set('sortOrder', params.sortOrder);
-    if (params?.limit) searchParams.set('limit', params.limit.toString());
-    const query = searchParams.toString() ? `?${searchParams.toString()}` : '';
-    return request<AdminCustomerItem[]>(`/admin/customers${query}`);
+    const cacheKey = `admin_customers_${query}`;
+    if (!options?.forceRefresh) {
+      const cached = getCached<AdminCustomerItem[]>(cacheKey, 15000);
+      if (cached) return cached;
+    }
+    const data = await request<AdminCustomerItem[]>(`/admin/customers${query}`);
+    setCached(cacheKey, data);
+    return data;
   },
 
   async getCustomerDetail(id: string): Promise<CustomerDetail> {
@@ -966,13 +1050,16 @@ export const api = {
     isBlocked: boolean,
     reason?: string,
   ): Promise<{ success: boolean; isBlocked: boolean; customerId: string; message: string }> {
-    return request<{ success: boolean; isBlocked: boolean; customerId: string; message: string }>(
+    const res = await request<{ success: boolean; isBlocked: boolean; customerId: string; message: string }>(
       `/admin/customers/${id}/toggle-block`,
       {
         method: 'POST',
         body: JSON.stringify({ isBlocked, reason }),
       },
     );
+    clearClientCache('admin_customers');
+    clearClientCache('admin_overview');
+    return res;
   },
 
   // 19. Outbox & Failed Events
@@ -1047,9 +1134,16 @@ export const api = {
     });
   },
 
-  // 21. Administrative Users & Settings
-  async getAdminUsers(): Promise<AdminTeamMember[]> {
-    return request<AdminTeamMember[]>('/admin/users');
+  // 21. Administrative Users & Settings (Accelerated with in-memory SWR cache for 0ms transitions)
+  async getAdminUsers(options?: { forceRefresh?: boolean }): Promise<AdminTeamMember[]> {
+    const cacheKey = 'admin_users';
+    if (!options?.forceRefresh) {
+      const cached = getCached<AdminTeamMember[]>(cacheKey, 30000);
+      if (cached) return cached;
+    }
+    const data = await request<AdminTeamMember[]>('/admin/users');
+    setCached(cacheKey, data);
+    return data;
   },
 
   async createAdminUser(payload: {
@@ -1061,52 +1155,73 @@ export const api = {
     lastName?: string;
     username?: string;
   }): Promise<{ id: string; email: string; telegramUserId?: string; role: string; totpSecret: string; mustChangePassword?: boolean }> {
-    return request('/admin/users', {
+    const res = await request<{ id: string; email: string; telegramUserId?: string; role: string; totpSecret: string; mustChangePassword?: boolean }>('/admin/users', {
       method: 'POST',
       body: JSON.stringify({ ...payload, role: payload.role || 'ADMIN' }),
     });
+    clearClientCache('admin_users');
+    return res;
   },
 
   async deactivateAdminUser(userId: string): Promise<{ success: boolean; message: string; isDeactivated: boolean; heldRole: string }> {
-    return request(`/admin/users/${userId}/deactivate`, {
+    const res = await request<{ success: boolean; message: string; isDeactivated: boolean; heldRole: string }>(`/admin/users/${userId}/deactivate`, {
       method: 'POST',
     });
+    clearClientCache('admin_users');
+    return res;
   },
 
   async resumeAdminUser(userId: string): Promise<{ success: boolean; message: string; isDeactivated: boolean; role: string }> {
-    return request(`/admin/users/${userId}/resume`, {
+    const res = await request<{ success: boolean; message: string; isDeactivated: boolean; role: string }>(`/admin/users/${userId}/resume`, {
       method: 'POST',
     });
+    clearClientCache('admin_users');
+    return res;
   },
 
   async deleteAdminUser(userId: string): Promise<{ success: boolean; message: string }> {
-    return request(`/admin/users/${userId}`, {
+    const res = await request<{ success: boolean; message: string }>(`/admin/users/${userId}`, {
       method: 'DELETE',
     });
+    clearClientCache('admin_users');
+    return res;
   },
 
   async unlockAdminUser(userId: string): Promise<{ success: boolean; message: string }> {
-    return request(`/admin/users/${userId}/reset-lockout`, {
+    const res = await request<{ success: boolean; message: string }>(`/admin/users/${userId}/reset-lockout`, {
       method: 'POST',
     });
+    clearClientCache('admin_users');
+    return res;
   },
 
   async resetAdminUserPassword(userId: string, password: string): Promise<{ success: boolean; message: string }> {
-    return request(`/admin/users/${userId}/reset-password`, {
+    const res = await request<{ success: boolean; message: string }>(`/admin/users/${userId}/reset-password`, {
       method: 'POST',
       body: JSON.stringify({ password }),
     });
+    clearClientCache('admin_users');
+    return res;
   },
 
-  async getAdminSettings(): Promise<PlatformSettings> {
-    return request<PlatformSettings>('/admin/settings');
+  async getAdminSettings(options?: { forceRefresh?: boolean }): Promise<PlatformSettings> {
+    const cacheKey = 'admin_settings';
+    if (!options?.forceRefresh) {
+      const cached = getCached<PlatformSettings>(cacheKey, 30000);
+      if (cached) return cached;
+    }
+    const data = await request<PlatformSettings>('/admin/settings');
+    setCached(cacheKey, data);
+    return data;
   },
 
   async updateAdminSettings(payload: Partial<PlatformSettings>): Promise<PlatformSettings> {
-    return request<PlatformSettings>('/admin/settings', {
+    const res = await request<PlatformSettings>('/admin/settings', {
       method: 'PATCH',
       body: JSON.stringify(payload),
     });
+    clearClientCache('admin_settings');
+    return res;
   },
 
   async testTelegramChannel(channelId?: string): Promise<TestChannelResult> {

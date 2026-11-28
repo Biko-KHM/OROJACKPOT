@@ -274,7 +274,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
         </div>
       )}
 
-      {isLoading ? (
+      {isLoading && inventory.length === 0 ? (
         <CustomLoader
           fullScreen={false}
           message="Loading number inventory"

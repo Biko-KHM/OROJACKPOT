@@ -49,6 +49,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentAdmin }) => {
   const [users, setUsers] = useState<AdminTeamMember[]>([]);
 
   const [isLoading, setIsLoading] = useState(true);
+  const [isDataLoaded, setIsDataLoaded] = useState(false);
   const [isSavingSettings, setIsSavingSettings] = useState(false);
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -82,26 +83,31 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentAdmin }) => {
   const [newRole, setNewRole] = useState<'ADMIN' | 'SUPERADMIN'>('ADMIN');
   const [isCreatingUser, setIsCreatingUser] = useState(false);
 
-  const fetchData = useCallback(async () => {
-    setIsLoading(true);
+  const fetchData = useCallback(async (silent = false) => {
+    if (!silent && !isDataLoaded) {
+      setIsLoading(true);
+    }
     setError(null);
     try {
       const [settingsData, usersData] = await Promise.all([
-        api.getAdminSettings(),
-        api.getAdminUsers(),
+        api.getAdminSettings({ forceRefresh: !silent }),
+        api.getAdminUsers({ forceRefresh: !silent }),
       ]);
       setSettings(settingsData);
       setUsers(usersData);
+      setIsDataLoaded(true);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch settings and users');
+      if (!isDataLoaded) {
+        setError(err instanceof Error ? err.message : 'Failed to fetch settings and users');
+      }
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [isDataLoaded]);
 
   useEffect(() => {
-    void fetchData();
-  }, [fetchData]);
+    void fetchData(isDataLoaded);
+  }, []);
 
   const handleSaveSettings = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -315,7 +321,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentAdmin }) => {
         </div>
       )}
 
-      {isLoading && users.length === 0 ? (
+      {isLoading && !isDataLoaded ? (
         <CustomLoader
           fullScreen={false}
           message="Loading platform settings & security"

@@ -21,24 +21,32 @@ interface AdminOverviewViewProps {
 export const AdminOverviewView: React.FC<AdminOverviewViewProps> = ({ onNavigateTab }) => {
   const [metrics, setMetrics] = useState<AdminOverview | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchOverview = useCallback(async () => {
-    setIsLoading(true);
+  const fetchOverview = useCallback(async (silent = false) => {
+    if (!silent && !metrics) {
+      setIsLoading(true);
+    } else {
+      setIsRefreshing(true);
+    }
     try {
-      const data = await api.getAdminOverview();
+      const data = await api.getAdminOverview({ forceRefresh: !silent });
       setMetrics(data);
       setError(null);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Failed to load metrics');
+      if (!metrics) {
+        setError(err instanceof Error ? err.message : 'Failed to load metrics');
+      }
     } finally {
       setIsLoading(false);
+      setIsRefreshing(false);
     }
-  }, []);
+  }, [metrics]);
 
   useEffect(() => {
-    void fetchOverview();
-  }, [fetchOverview]);
+    void fetchOverview(metrics !== null);
+  }, []);
 
   const formatETB = (minor: string | undefined): string => {
     if (!minor) return '0.00 ETB';
@@ -57,11 +65,11 @@ export const AdminOverviewView: React.FC<AdminOverviewViewProps> = ({ onNavigate
           </p>
         </div>
         <button
-          onClick={() => void fetchOverview()}
-          disabled={isLoading}
+          onClick={() => void fetchOverview(false)}
+          disabled={isLoading || isRefreshing}
           className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs transition-colors self-start sm:self-auto"
         >
-          <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin text-emerald-400' : ''}`} />
+          <RefreshCw className={`w-3.5 h-3.5 ${isLoading || isRefreshing ? 'animate-spin text-emerald-400' : ''}`} />
           <span>Refresh Metrics</span>
         </button>
       </div>

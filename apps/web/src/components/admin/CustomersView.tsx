@@ -31,6 +31,7 @@ interface CustomersViewProps {
 export const CustomersView: React.FC<CustomersViewProps> = ({ onNavigateToAudit }) => {
   const [customers, setCustomers] = useState<AdminCustomerItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'ACTIVE' | 'BLOCKED' | 'WITH_TICKETS' | 'WITH_HOLDS'>('ALL');
   const [sortBy, setSortBy] = useState<'createdAt' | 'totalSpent' | 'confirmedTickets' | 'totalReservations' | 'activeHolds'>('createdAt');
@@ -52,8 +53,12 @@ export const CustomersView: React.FC<CustomersViewProps> = ({ onNavigateToAudit 
   // Copy feedback state
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
-  const fetchCustomers = useCallback(async () => {
-    setIsLoading(true);
+  const fetchCustomers = useCallback(async (silent = false) => {
+    if (!silent && customers.length === 0) {
+      setIsLoading(true);
+    } else {
+      setIsRefreshing(true);
+    }
     setError(null);
     try {
       const data = await api.getAdminCustomers({
@@ -61,18 +66,21 @@ export const CustomersView: React.FC<CustomersViewProps> = ({ onNavigateToAudit 
         status: statusFilter,
         sortBy,
         sortOrder,
-      });
+      }, { forceRefresh: !silent });
       setCustomers(Array.isArray(data) ? data : []);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch customers');
+      if (customers.length === 0) {
+        setError(err instanceof Error ? err.message : 'Failed to fetch customers');
+      }
     } finally {
       setIsLoading(false);
+      setIsRefreshing(false);
     }
-  }, [searchQuery, statusFilter, sortBy, sortOrder]);
+  }, [searchQuery, statusFilter, sortBy, sortOrder, customers.length]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      void fetchCustomers();
+      void fetchCustomers(customers.length > 0);
     }, 250);
     return () => clearTimeout(timer);
   }, [fetchCustomers]);
@@ -189,11 +197,11 @@ export const CustomersView: React.FC<CustomersViewProps> = ({ onNavigateToAudit 
         </div>
         <div className="flex items-center gap-2 self-start sm:self-auto shrink-0">
           <button
-            onClick={() => void fetchCustomers()}
-            disabled={isLoading}
+            onClick={() => void fetchCustomers(false)}
+            disabled={isLoading || isRefreshing}
             className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 transition-colors text-xs font-semibold shadow-sm active:scale-95"
           >
-            <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin text-emerald-400' : ''}`} />
+            <RefreshCw className={`w-3.5 h-3.5 ${isLoading || isRefreshing ? 'animate-spin text-emerald-400' : ''}`} />
             <span>Refresh Players</span>
           </button>
         </div>

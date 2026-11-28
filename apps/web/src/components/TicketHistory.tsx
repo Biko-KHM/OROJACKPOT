@@ -108,7 +108,7 @@ export const TicketHistory: React.FC<TicketHistoryProps> = ({ onExploreCampaigns
     }
   };
 
-  if (isLoading) {
+  if (isLoading && tickets.length === 0) {
     return <CustomLoader fullScreen={false} message="Loading your tickets" subtitle="Checking confirmed entries" />;
   }
 

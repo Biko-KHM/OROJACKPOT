@@ -26,6 +26,7 @@ export const PaymentReviewsView: React.FC = () => {
   const [submissions, setSubmissions] = useState<PaymentSubmissionReviewItem[]>([]);
   const [lotteries, setLotteries] = useState<AdminLottery[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [statusFilter, setStatusFilter] = useState<'SUBMITTED' | 'ALL'>('SUBMITTED');
   const [historySubFilter, setHistorySubFilter] = useState<'ALL' | 'APPROVED' | 'REJECTED'>('ALL');
   const [selectedCampaign, setSelectedCampaign] = useState<string>('ALL');
@@ -71,27 +72,34 @@ export const PaymentReviewsView: React.FC = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const fetchSubmissions = useCallback(async () => {
-    setIsLoading(true);
+  const fetchSubmissions = useCallback(async (silent = false) => {
+    if (!silent && submissions.length === 0) {
+      setIsLoading(true);
+    } else {
+      setIsRefreshing(true);
+    }
     setError(null);
     try {
       const [submissionsData, lotteriesData] = await Promise.all([
-        api.getAdminSubmissions(statusFilter === 'ALL' ? undefined : 'SUBMITTED'),
-        api.getAdminLotteries().catch(() => []),
+        api.getAdminSubmissions(statusFilter === 'ALL' ? undefined : 'SUBMITTED', undefined, undefined, undefined, { forceRefresh: !silent }),
+        api.getAdminLotteries(undefined, { forceRefresh: !silent }).catch(() => []),
       ]);
       setSubmissions(Array.isArray(submissionsData) ? submissionsData : []);
       if (Array.isArray(lotteriesData)) {
         setLotteries(lotteriesData);
       }
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch payment submissions');
+      if (submissions.length === 0) {
+        setError(err instanceof Error ? err.message : 'Failed to fetch payment submissions');
+      }
     } finally {
       setIsLoading(false);
+      setIsRefreshing(false);
     }
-  }, [statusFilter]);
+  }, [statusFilter, submissions.length]);
 
   useEffect(() => {
-    void fetchSubmissions();
+    void fetchSubmissions(submissions.length > 0);
   }, [fetchSubmissions]);
 
   // Duplicate Receipt File SHA256 Detection (FR-20)
@@ -354,12 +362,12 @@ export const PaymentReviewsView: React.FC = () => {
         </div>
         <div className="flex items-center gap-2 self-start sm:self-auto">
           <button
-            onClick={() => void fetchSubmissions()}
-            disabled={isLoading}
+            onClick={() => void fetchSubmissions(false)}
+            disabled={isLoading || isRefreshing}
             className="p-2.5 rounded-xl bg-[#0e131b] hover:bg-[#131923] border border-[#1a2230] text-slate-300 transition-colors shadow-sm active:scale-95"
             title="Refresh queue"
           >
-            <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin text-emerald-400' : ''}`} />
+            <RefreshCw className={`w-4 h-4 ${isLoading || isRefreshing ? 'animate-spin text-emerald-400' : ''}`} />
           </button>
         </div>
       </div>

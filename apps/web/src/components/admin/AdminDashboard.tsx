@@ -157,6 +157,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   onSwitchToMiniApp,
 }) => {
   const [activeTab, setActiveTab] = useState<AdminTab>('overview');
+  const [visitedTabs, setVisitedTabs] = useState<Record<string, boolean>>({ overview: true });
   const [inspectLotteryId, setInspectLotteryId] = useState<string | undefined>(undefined);
   const [inspectLotteryTitle, setInspectLotteryTitle] = useState<string | undefined>(undefined);
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -165,27 +166,38 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   // Dynamic desktop check: sidebar is rendered exclusively on desktop PC viewports (>= 1024px)
   const isDesktop = useIsDesktop();
 
-  // Poll / fetch overview on mount to display badge on Payment Reviews
+  // Periodic overview badge polling without firing redundant requests on every tab click
   useEffect(() => {
-    void api
-      .getAdminOverview()
-      .then((data) => {
-        if (data && typeof data.pendingReviewsCount === 'number') {
-          setPendingReviewsCount(data.pendingReviewsCount);
-        }
-      })
-      .catch(() => { });
-  }, [activeTab]);
+    let isMounted = true;
+    const fetchBadge = () => {
+      api
+        .getAdminOverview()
+        .then((data) => {
+          if (isMounted && data && typeof data.pendingReviewsCount === 'number') {
+            setPendingReviewsCount(data.pendingReviewsCount);
+          }
+        })
+        .catch(() => { });
+    };
+    fetchBadge();
+    const timer = setInterval(fetchBadge, 30000);
+    return () => {
+      isMounted = false;
+      clearInterval(timer);
+    };
+  }, []);
 
   const handleInspectInventory = (lotteryId: string, title: string) => {
     setInspectLotteryId(lotteryId);
     setInspectLotteryTitle(title);
+    setVisitedTabs((prev) => (prev.inventory ? prev : { ...prev, inventory: true }));
     setActiveTab('inventory');
     triggerHaptic('selection');
   };
 
   const handleSelectTab = (tab: AdminTab) => {
     setActiveTab(tab);
+    setVisitedTabs((prev) => (prev[tab] ? prev : { ...prev, [tab]: true }));
     triggerHaptic('selection');
   };
 
@@ -427,22 +439,36 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         <main className="flex-1 overflow-y-auto p-3.5 sm:p-6 lg:p-8 pb-24 lg:pb-8 transition-colors no-scrollbar">
           <div className="max-w-7xl mx-auto space-y-6">
             <AdminErrorBoundary fallbackViewName={currentItem.label}>
-              {activeTab === 'overview' && (
-                <AdminOverviewView onNavigateTab={(tab) => handleSelectTab(tab as AdminTab)} />
-              )}
-              {activeTab === 'campaigns' && (
-                <CampaignsView onInspectInventory={handleInspectInventory} />
-              )}
-              {activeTab === 'refunds' && <RefundsView />}
-              {activeTab === 'inventory' && (
-                <InventoryView
-                  initialLotteryId={inspectLotteryId}
-                  initialLotteryTitle={inspectLotteryTitle}
-                />
-              )}
-              {activeTab === 'reviews' && <PaymentReviewsView />}
-              {activeTab === 'customers' && <CustomersView />}
-              {activeTab === 'settings' && <SettingsView currentAdmin={admin} />}
+              <div className={activeTab === 'overview' ? 'block' : 'hidden'}>
+                {visitedTabs.overview && (
+                  <AdminOverviewView onNavigateTab={(tab) => handleSelectTab(tab as AdminTab)} />
+                )}
+              </div>
+              <div className={activeTab === 'campaigns' ? 'block' : 'hidden'}>
+                {visitedTabs.campaigns && (
+                  <CampaignsView onInspectInventory={handleInspectInventory} />
+                )}
+              </div>
+              <div className={activeTab === 'refunds' ? 'block' : 'hidden'}>
+                {visitedTabs.refunds && <RefundsView />}
+              </div>
+              <div className={activeTab === 'inventory' ? 'block' : 'hidden'}>
+                {visitedTabs.inventory && (
+                  <InventoryView
+                    initialLotteryId={inspectLotteryId}
+                    initialLotteryTitle={inspectLotteryTitle}
+                  />
+                )}
+              </div>
+              <div className={activeTab === 'reviews' ? 'block' : 'hidden'}>
+                {visitedTabs.reviews && <PaymentReviewsView />}
+              </div>
+              <div className={activeTab === 'customers' ? 'block' : 'hidden'}>
+                {visitedTabs.customers && <CustomersView />}
+              </div>
+              <div className={activeTab === 'settings' ? 'block' : 'hidden'}>
+                {visitedTabs.settings && <SettingsView currentAdmin={admin} />}
+              </div>
             </AdminErrorBoundary>
           </div>
         </main>

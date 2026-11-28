@@ -44,6 +44,7 @@ const isImageFileType = (file: File): boolean => {
 export const CampaignsView: React.FC<CampaignsViewProps> = ({ onInspectInventory }) => {
   const [campaigns, setCampaigns] = useState<AdminLottery[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
@@ -401,22 +402,29 @@ export const CampaignsView: React.FC<CampaignsViewProps> = ({ onInspectInventory
     }
   };
 
-  const fetchCampaigns = useCallback(async () => {
-    setIsLoading(true);
+  const fetchCampaigns = useCallback(async (silent = false) => {
+    if (!silent && campaigns.length === 0) {
+      setIsLoading(true);
+    } else {
+      setIsRefreshing(true);
+    }
     try {
-      const data = await api.getAdminLotteries();
+      const data = await api.getAdminLotteries(undefined, { forceRefresh: !silent });
       setCampaigns(Array.isArray(data) ? data : []);
       setError(null);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch campaigns');
+      if (campaigns.length === 0) {
+        setError(err instanceof Error ? err.message : 'Failed to fetch campaigns');
+      }
     } finally {
       setIsLoading(false);
+      setIsRefreshing(false);
     }
-  }, []);
+  }, [campaigns.length]);
 
   useEffect(() => {
-    void fetchCampaigns();
-  }, [fetchCampaigns]);
+    void fetchCampaigns(campaigns.length > 0);
+  }, []);
 
   const handlePublish = async (id: string) => {
     if (!window.confirm('Publish this campaign? This generates number inventory atomically and opens sales.')) return;
@@ -821,12 +829,12 @@ export const CampaignsView: React.FC<CampaignsViewProps> = ({ onInspectInventory
         </div>
         <div className="flex items-center gap-2 self-start sm:self-auto">
           <button
-            onClick={() => void fetchCampaigns()}
-            disabled={isLoading}
+            onClick={() => void fetchCampaigns(false)}
+            disabled={isLoading || isRefreshing}
             className="p-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors"
             title="Refresh"
           >
-            <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin text-emerald-400' : ''}`} />
+            <RefreshCw className={`w-4 h-4 ${isLoading || isRefreshing ? 'animate-spin text-emerald-400' : ''}`} />
           </button>
           <button
             onClick={() => setIsCreateModalOpen(true)}

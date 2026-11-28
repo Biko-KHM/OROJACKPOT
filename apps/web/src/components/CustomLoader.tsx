@@ -93,15 +93,26 @@ export const CustomLoader: React.FC<CustomLoaderProps> = ({
           />
         </svg>
 
-        {/* Static Inner Dark Squircle Badge with Stylized "L" */}
+        {/* Static Inner Dark Squircle Badge with Brand Logo */}
         <div
-          className={`absolute ${sizeClasses.badge} bg-[#0c251b] border border-[#123c2a] flex items-center justify-center shadow-lg shadow-black/80`}
+          className={`absolute ${sizeClasses.badge} bg-[#0c251b] border border-[#123c2a] overflow-hidden flex items-center justify-center shadow-lg shadow-black/80`}
         >
-          <span
-            className={`${sizeClasses.text} font-display font-black text-[#00d26a] tracking-tight leading-none drop-shadow-[0_0_8px_rgba(0,210,106,0.6)]`}
-          >
-            L
-          </span>
+          <img
+            src="/logojackpot.jpg"
+            alt="OROJACKPOT"
+            className="w-full h-full object-cover"
+            onError={(e) => {
+              // Fallback to stylized 'L' if image cannot load
+              e.currentTarget.style.display = 'none';
+              const parent = e.currentTarget.parentElement;
+              if (parent) {
+                const span = document.createElement('span');
+                span.className = `${sizeClasses.text} font-display font-black text-[#00d26a] tracking-tight leading-none drop-shadow-[0_0_8px_rgba(0,210,106,0.6)]`;
+                span.textContent = 'L';
+                parent.appendChild(span);
+              }
+            }}
+          />
         </div>
       </div>
 
