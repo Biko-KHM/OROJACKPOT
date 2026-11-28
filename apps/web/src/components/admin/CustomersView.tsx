@@ -4,7 +4,6 @@ import {
   Search,
   RefreshCw,
   AlertCircle,
-  Shield,
   ShieldAlert,
   ShieldCheck,
   Ticket,
@@ -18,7 +17,6 @@ import {
   Copy,
   Check,
   ArrowUpDown,
-  Banknote,
   X,
   History,
 } from 'lucide-react';
@@ -173,35 +171,27 @@ export const CustomersView: React.FC<CustomersViewProps> = ({ onNavigateToAudit 
   const totalCustomersCount = customers.length;
   const activeCustomersCount = customers.filter((c) => !c.isBlocked).length;
   const blockedCustomersCount = customers.filter((c) => c.isBlocked).length;
-  const totalConfirmedTickets = customers.reduce((acc, c) => acc + (c.confirmedTickets || 0), 0);
-  const totalSpendMinor = customers.reduce((acc, c) => {
-    try {
-      return acc + BigInt(c.totalSpentMinor || '0');
-    } catch {
-      return acc;
-    }
-  }, 0n);
 
   return (
     <div className="space-y-6">
       {/* Top Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-3 border-b border-slate-800">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-800">
         <div>
-          <div className="flex items-center gap-2">
-            <h2 className="text-xl font-black text-white tracking-tight">Customer Accounts & Activity</h2>
+          <div className="flex items-center gap-2 flex-wrap">
+            <h2 className="text-lg sm:text-xl font-black text-white tracking-tight">Customer Accounts & Activity</h2>
             <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-              REAL USERS ACTIVE
+              {totalCustomersCount} PLAYERS • {activeCustomersCount} ACTIVE
             </span>
           </div>
           <p className="text-xs text-slate-400 mt-1">
             Registered Telegram players, live reservations, lifetime ticket spend, and complete player audit trail
           </p>
         </div>
-        <div className="flex items-center gap-2 self-start sm:self-auto">
+        <div className="flex items-center gap-2 self-start sm:self-auto shrink-0">
           <button
             onClick={() => void fetchCustomers()}
             disabled={isLoading}
-            className="flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-750 transition-colors text-xs font-semibold shadow-sm"
+            className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 transition-colors text-xs font-semibold shadow-sm active:scale-95"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin text-emerald-400' : ''}`} />
             <span>Refresh Players</span>
@@ -215,61 +205,6 @@ export const CustomersView: React.FC<CustomersViewProps> = ({ onNavigateToAudit 
           <span>{error}</span>
         </div>
       )}
-
-      {/* KPI Summary Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <div className="p-4 rounded-2xl bg-gradient-to-br from-slate-900/80 to-slate-950/80 border border-slate-800/80 shadow-sm">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Total Players</span>
-            <div className="w-7 h-7 rounded-xl bg-blue-500/10 text-blue-400 flex items-center justify-center">
-              <Users className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="text-2xl font-black text-white mt-2">{totalCustomersCount}</div>
-          <div className="text-[10px] text-slate-400 mt-0.5 flex items-center gap-1.5 font-medium">
-            <span className="text-emerald-400 font-bold">{activeCustomersCount} Active</span>
-            <span>•</span>
-            <span className={blockedCustomersCount > 0 ? 'text-rose-400 font-bold' : 'text-slate-500'}>
-              {blockedCustomersCount} Blocked
-            </span>
-          </div>
-        </div>
-
-        <div className="p-4 rounded-2xl bg-gradient-to-br from-slate-900/80 to-slate-950/80 border border-slate-800/80 shadow-sm">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Confirmed Tickets</span>
-            <div className="w-7 h-7 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center">
-              <Ticket className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="text-2xl font-black text-white mt-2">{totalConfirmedTickets}</div>
-          <div className="text-[10px] text-emerald-400/90 mt-0.5 font-medium">Eligible for lottery draws</div>
-        </div>
-
-        <div className="p-4 rounded-2xl bg-gradient-to-br from-slate-900/80 to-slate-950/80 border border-slate-800/80 shadow-sm">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Total Player Volume</span>
-            <div className="w-7 h-7 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center">
-              <Banknote className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="text-2xl font-black text-emerald-400 mt-2">{formatETB(totalSpendMinor.toString())}</div>
-          <div className="text-[10px] text-slate-400 mt-0.5 font-medium">Lifetime confirmed tickets</div>
-        </div>
-
-        <div className="p-4 rounded-2xl bg-gradient-to-br from-slate-900/80 to-slate-950/80 border border-slate-800/80 shadow-sm">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Security Guard</span>
-            <div className="w-7 h-7 rounded-xl bg-violet-500/10 text-violet-400 flex items-center justify-center">
-              <Shield className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="text-2xl font-black text-white mt-2">
-            {blockedCustomersCount === 0 ? 'Optimal' : `${blockedCustomersCount} Flagged`}
-          </div>
-          <div className="text-[10px] text-slate-400 mt-0.5 font-medium">Anti-hoarding & ban controls</div>
-        </div>
-      </div>
 
       {/* Filter and Search Controls Toolbar */}
       <div className="bg-slate-900/70 p-4 rounded-2xl border border-slate-800 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 shadow-sm">
@@ -297,51 +232,46 @@ export const CustomersView: React.FC<CustomersViewProps> = ({ onNavigateToAudit 
         <div className="flex flex-wrap items-center gap-1.5 overflow-x-auto">
           <button
             onClick={() => setStatusFilter('ALL')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
-              statusFilter === 'ALL'
-                ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 shadow-sm'
-                : 'bg-slate-950/60 text-slate-400 hover:text-slate-200 border border-slate-800'
-            }`}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${statusFilter === 'ALL'
+              ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 shadow-sm'
+              : 'bg-slate-950/60 text-slate-400 hover:text-slate-200 border border-slate-800'
+              }`}
           >
             All ({totalCustomersCount})
           </button>
           <button
             onClick={() => setStatusFilter('ACTIVE')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
-              statusFilter === 'ACTIVE'
-                ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 shadow-sm'
-                : 'bg-slate-950/60 text-slate-400 hover:text-slate-200 border border-slate-800'
-            }`}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${statusFilter === 'ACTIVE'
+              ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 shadow-sm'
+              : 'bg-slate-950/60 text-slate-400 hover:text-slate-200 border border-slate-800'
+              }`}
           >
             Active ({activeCustomersCount})
           </button>
           <button
             onClick={() => setStatusFilter('BLOCKED')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
-              statusFilter === 'BLOCKED'
-                ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40 shadow-sm'
-                : 'bg-slate-950/60 text-slate-400 hover:text-slate-200 border border-slate-800'
-            }`}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${statusFilter === 'BLOCKED'
+              ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40 shadow-sm'
+              : 'bg-slate-950/60 text-slate-400 hover:text-slate-200 border border-slate-800'
+              }`}
           >
             Blocked ({blockedCustomersCount})
           </button>
           <button
             onClick={() => setStatusFilter('WITH_TICKETS')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
-              statusFilter === 'WITH_TICKETS'
-                ? 'bg-indigo-500/20 text-indigo-400 border border-indigo-500/40 shadow-sm'
-                : 'bg-slate-950/60 text-slate-400 hover:text-slate-200 border border-slate-800'
-            }`}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${statusFilter === 'WITH_TICKETS'
+              ? 'bg-indigo-500/20 text-indigo-400 border border-indigo-500/40 shadow-sm'
+              : 'bg-slate-950/60 text-slate-400 hover:text-slate-200 border border-slate-800'
+              }`}
           >
             With Tickets
           </button>
           <button
             onClick={() => setStatusFilter('WITH_HOLDS')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
-              statusFilter === 'WITH_HOLDS'
-                ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40 shadow-sm'
-                : 'bg-slate-950/60 text-slate-400 hover:text-slate-200 border border-slate-800'
-            }`}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${statusFilter === 'WITH_HOLDS'
+              ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40 shadow-sm'
+              : 'bg-slate-950/60 text-slate-400 hover:text-slate-200 border border-slate-800'
+              }`}
           >
             Active Holds
           </button>
@@ -424,9 +354,8 @@ export const CustomersView: React.FC<CustomersViewProps> = ({ onNavigateToAudit 
                         >
                           {initials}
                           <span
-                            className={`w-2.5 h-2.5 rounded-full absolute -top-0.5 -right-0.5 border-2 border-slate-900 ${
-                              c.isBlocked ? 'bg-rose-500' : 'bg-emerald-400'
-                            }`}
+                            className={`w-2.5 h-2.5 rounded-full absolute -top-0.5 -right-0.5 border-2 border-slate-900 ${c.isBlocked ? 'bg-rose-500' : 'bg-emerald-400'
+                              }`}
                           />
                         </div>
                         <div>
@@ -552,11 +481,10 @@ export const CustomersView: React.FC<CustomersViewProps> = ({ onNavigateToAudit 
                             setBlockReason('');
                             setBlockError(null);
                           }}
-                          className={`p-1.5 rounded-lg transition-colors border ${
-                            c.isBlocked
-                              ? 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
-                              : 'bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border-rose-500/30'
-                          }`}
+                          className={`p-1.5 rounded-lg transition-colors border ${c.isBlocked
+                            ? 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
+                            : 'bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border-rose-500/30'
+                            }`}
                           title={c.isBlocked ? 'Unblock Player Account' : 'Block Player Account'}
                         >
                           {c.isBlocked ? (
@@ -596,11 +524,10 @@ export const CustomersView: React.FC<CustomersViewProps> = ({ onNavigateToAudit 
                     </h3>
                     {customerDetail && (
                       <span
-                        className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                          customerDetail.isBlocked
-                            ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
-                            : 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
-                        }`}
+                        className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${customerDetail.isBlocked
+                          ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
+                          : 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
+                          }`}
                       >
                         {customerDetail.isBlocked ? 'BLOCKED' : 'ACTIVE'}
                       </span>
@@ -640,11 +567,10 @@ export const CustomersView: React.FC<CustomersViewProps> = ({ onNavigateToAudit 
                       setBlockReason('');
                       setBlockError(null);
                     }}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-colors border flex items-center gap-1.5 ${
-                      customerDetail.isBlocked
-                        ? 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
-                        : 'bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border-rose-500/30'
-                    }`}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-colors border flex items-center gap-1.5 ${customerDetail.isBlocked
+                      ? 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
+                      : 'bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border-rose-500/30'
+                      }`}
                   >
                     {customerDetail.isBlocked ? <ShieldCheck className="w-3.5 h-3.5" /> : <ShieldAlert className="w-3.5 h-3.5" />}
                     <span>{customerDetail.isBlocked ? 'Unblock Player' : 'Block Player'}</span>
@@ -711,42 +637,38 @@ export const CustomersView: React.FC<CustomersViewProps> = ({ onNavigateToAudit 
                 <div className="flex items-center gap-2 border-b border-slate-800 pb-2">
                   <button
                     onClick={() => setDetailTab('overview')}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                      detailTab === 'overview'
-                        ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40'
-                        : 'text-slate-400 hover:text-white'
-                    }`}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${detailTab === 'overview'
+                      ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40'
+                      : 'text-slate-400 hover:text-white'
+                      }`}
                   >
                     Player Overview
                   </button>
                   <button
                     onClick={() => setDetailTab('reservations')}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                      detailTab === 'reservations'
-                        ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40'
-                        : 'text-slate-400 hover:text-white'
-                    }`}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${detailTab === 'reservations'
+                      ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40'
+                      : 'text-slate-400 hover:text-white'
+                      }`}
                   >
                     Ticket History ({customerDetail.reservations.length})
                   </button>
                   <button
                     onClick={() => setDetailTab('audit')}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                      detailTab === 'audit'
-                        ? 'bg-indigo-500/20 text-indigo-400 border border-indigo-500/40'
-                        : 'text-slate-400 hover:text-white'
-                    }`}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${detailTab === 'audit'
+                      ? 'bg-indigo-500/20 text-indigo-400 border border-indigo-500/40'
+                      : 'text-slate-400 hover:text-white'
+                      }`}
                   >
                     Audit Trail ({customerDetail.auditLogs.length})
                   </button>
                   {customerDetail.wonDraws.length > 0 && (
                     <button
                       onClick={() => setDetailTab('wins')}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1 ${
-                        detailTab === 'wins'
-                          ? 'bg-teal-500/20 text-teal-300 border border-teal-500/40'
-                          : 'text-teal-400 hover:text-teal-200'
-                      }`}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1 ${detailTab === 'wins'
+                        ? 'bg-teal-500/20 text-teal-300 border border-teal-500/40'
+                        : 'text-teal-400 hover:text-teal-200'
+                        }`}
                     >
                       <Trophy className="w-3 h-3" />
                       Victories ({customerDetail.wonDraws.length})
@@ -793,9 +715,8 @@ export const CustomersView: React.FC<CustomersViewProps> = ({ onNavigateToAudit 
                         <div className="text-xs flex items-center justify-between py-1 border-b border-slate-800/80">
                           <span className="text-slate-400">Anti-Fraud Status:</span>
                           <span
-                            className={`font-bold ${
-                              customerDetail.isBlocked ? 'text-rose-400' : 'text-emerald-400'
-                            }`}
+                            className={`font-bold ${customerDetail.isBlocked ? 'text-rose-400' : 'text-emerald-400'
+                              }`}
                           >
                             {customerDetail.isBlocked ? 'Restricted / Suspended' : 'Clear / Verified'}
                           </span>
@@ -863,13 +784,12 @@ export const CustomersView: React.FC<CustomersViewProps> = ({ onNavigateToAudit 
                                 </td>
                                 <td className="py-2.5 px-3 text-center">
                                   <span
-                                    className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                                      r.status === 'CONFIRMED'
-                                        ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
-                                        : r.status === 'AWAITING_PAYMENT' || r.status === 'PENDING_REVIEW'
+                                    className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${r.status === 'CONFIRMED'
+                                      ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
+                                      : r.status === 'AWAITING_PAYMENT' || r.status === 'PENDING_REVIEW'
                                         ? 'bg-amber-500/15 text-amber-300 border border-amber-500/30'
                                         : 'bg-slate-800 text-slate-400'
-                                    }`}
+                                      }`}
                                   >
                                     {r.status}
                                   </span>
@@ -1001,11 +921,10 @@ export const CustomersView: React.FC<CustomersViewProps> = ({ onNavigateToAudit 
           <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-md p-6 shadow-2xl space-y-4">
             <div className="flex items-center gap-3">
               <div
-                className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 ${
-                  blockTarget.isBlocked
-                    ? 'bg-emerald-500/20 text-emerald-400'
-                    : 'bg-rose-500/20 text-rose-400'
-                }`}
+                className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 ${blockTarget.isBlocked
+                  ? 'bg-emerald-500/20 text-emerald-400'
+                  : 'bg-rose-500/20 text-rose-400'
+                  }`}
               >
                 {blockTarget.isBlocked ? <ShieldCheck className="w-5 h-5" /> : <ShieldAlert className="w-5 h-5" />}
               </div>
@@ -1068,11 +987,10 @@ export const CustomersView: React.FC<CustomersViewProps> = ({ onNavigateToAudit 
               <button
                 onClick={() => void handleToggleBlockConfirm()}
                 disabled={isSubmittingBlock}
-                className={`px-4 py-2 rounded-xl text-xs font-bold text-white transition-all shadow-md flex items-center gap-1.5 ${
-                  blockTarget.isBlocked
-                    ? 'bg-emerald-600 hover:bg-emerald-500'
-                    : 'bg-rose-600 hover:bg-rose-500'
-                }`}
+                className={`px-4 py-2 rounded-xl text-xs font-bold text-white transition-all shadow-md flex items-center gap-1.5 ${blockTarget.isBlocked
+                  ? 'bg-emerald-600 hover:bg-emerald-500'
+                  : 'bg-rose-600 hover:bg-rose-500'
+                  }`}
               >
                 {isSubmittingBlock ? (
                   <RefreshCw className="w-3.5 h-3.5 animate-spin" />

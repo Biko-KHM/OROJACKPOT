@@ -536,11 +536,8 @@ describe('Step 10: Admin Dashboard & Verification Engine', () => {
       expect(screen.getByText('Payment Evidence Reviews')).toBeInTheDocument();
     });
 
-    // 6. Click "Reservations"
-    fireEvent.click(screen.getByRole('button', { name: /Reservations/i }));
-    await waitFor(() => {
-      expect(screen.getByText('Reservations Search & Audit')).toBeInTheDocument();
-    });
+    // 6. Verify "Reservations" / "Ticket Ledger" is removed from navigation
+    expect(screen.queryByRole('button', { name: /Reservations|Ticket Ledger/i })).not.toBeInTheDocument();
 
     // 7. Click "Customers"
     fireEvent.click(screen.getByRole('button', { name: /Customers/i }));

@@ -4,7 +4,6 @@ import {
   Layers,
   Package,
   CheckSquare,
-  Ticket,
   Users,
   Settings,
   LogOut,
@@ -21,7 +20,6 @@ import { CampaignsView } from './CampaignsView.js';
 import { RefundsView } from './RefundsView.js';
 import { InventoryView } from './InventoryView.js';
 import { PaymentReviewsView } from './PaymentReviewsView.js';
-import { ReservationsView } from './ReservationsView.js';
 import { CustomersView } from './CustomersView.js';
 import { SettingsView } from './SettingsView.js';
 
@@ -37,7 +35,6 @@ export type AdminTab =
   | 'refunds'
   | 'inventory'
   | 'reviews'
-  | 'reservations'
   | 'customers'
   | 'settings';
 
@@ -54,21 +51,19 @@ const NAV_ITEMS: NavItem[] = [
   { id: 'campaigns', label: 'Campaigns', shortLabel: 'Campaigns', icon: Layers },
   { id: 'reviews', label: 'Payment Reviews', shortLabel: 'Reviews', icon: CheckSquare },
   { id: 'inventory', label: 'Inventory', shortLabel: 'Inventory', icon: Package },
-  { id: 'reservations', label: 'Reservations', shortLabel: 'Reservations', icon: Ticket },
   { id: 'customers', label: 'Customers', shortLabel: 'Customers', icon: Users },
   { id: 'settings', label: 'Settings', shortLabel: 'Settings', icon: Settings },
 ];
 
 /**
- * Mobile navigation items: combines Reservations and Customers into a single button,
- * and positions Reviews right next to Campaigns.
+ * Mobile navigation items: positions Reviews right next to Campaigns.
  */
 const MOBILE_NAV_ITEMS: NavItem[] = [
   { id: 'overview', label: 'Dashboard', shortLabel: 'Dashboard', icon: LayoutDashboard },
   { id: 'campaigns', label: 'Campaigns', shortLabel: 'Campaigns', icon: Layers },
   { id: 'reviews', label: 'Payment Reviews', shortLabel: 'Reviews', icon: CheckSquare },
   { id: 'inventory', label: 'Inventory', shortLabel: 'Inventory', icon: Package },
-  { id: 'customers', label: 'Customers & Reservations', shortLabel: 'Customers', icon: Users },
+  { id: 'customers', label: 'Customers', shortLabel: 'Customers', icon: Users },
   { id: 'settings', label: 'Settings', shortLabel: 'Settings', icon: Settings },
 ];
 
@@ -179,7 +174,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           setPendingReviewsCount(data.pendingReviewsCount);
         }
       })
-      .catch(() => {});
+      .catch(() => { });
   }, [activeTab]);
 
   const handleInspectInventory = (lotteryId: string, title: string) => {
@@ -282,19 +277,17 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     <button
                       key={`desktop-${id}`}
                       onClick={() => handleSelectTab(id)}
-                      className={`w-full flex items-center justify-between px-3 py-1.5 xl:py-2 rounded-xl font-semibold text-xs transition-all text-left group ${
-                        isActive
-                          ? 'bg-[#00d26a] text-white font-bold shadow-md shadow-[#00d26a]/20'
-                          : 'text-[#94a3b8] hover:text-white hover:bg-[#131923]'
-                      }`}
+                      className={`w-full flex items-center justify-between px-3 py-1.5 xl:py-2 rounded-xl font-semibold text-xs transition-all text-left group ${isActive
+                        ? 'bg-[#00d26a] text-white font-bold shadow-md shadow-[#00d26a]/20'
+                        : 'text-[#94a3b8] hover:text-white hover:bg-[#131923]'
+                        }`}
                     >
                       <div className="flex items-center gap-2.5 min-w-0">
                         <Icon
-                          className={`w-4 h-4 shrink-0 transition-colors ${
-                            isActive
-                              ? 'text-white'
-                              : 'text-[#64748b] group-hover:text-[#00d26a]'
-                          }`}
+                          className={`w-4 h-4 shrink-0 transition-colors ${isActive
+                            ? 'text-white'
+                            : 'text-[#64748b] group-hover:text-[#00d26a]'
+                            }`}
                         />
                         <span className="tracking-wide text-[11.5px] xl:text-xs truncate">{label}</span>
                       </div>
@@ -304,13 +297,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         )}
                         {badge && (
                           <span
-                            className={`px-1.5 py-0.5 text-[9px] font-bold rounded-full ${
-                              isActive
-                                ? 'bg-black/25 text-white'
-                                : id === 'reviews'
+                            className={`px-1.5 py-0.5 text-[9px] font-bold rounded-full ${isActive
+                              ? 'bg-black/25 text-white'
+                              : id === 'reviews'
                                 ? 'bg-[#261a0c] text-[#f59e0b] border border-[#422b13]'
                                 : 'bg-[#0c251b] text-[#00d26a] border border-[#123c2a]'
-                            }`}
+                              }`}
                           >
                             {badge}
                           </span>
@@ -449,48 +441,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 />
               )}
               {activeTab === 'reviews' && <PaymentReviewsView />}
-              {(activeTab === 'customers' || activeTab === 'reservations') && (
-                <div className="space-y-4">
-                  {/* Segmented Sub-Tab Switcher to toggle between Customers Directory and Reservations Ledger */}
-                  <div className="flex items-center gap-1.5 p-1 bg-[#131923] border border-[#1a2230] rounded-2xl w-full sm:w-fit">
-                    <button
-                      type="button"
-                      aria-label="Player Directory"
-                      onClick={() => {
-                        setActiveTab('customers');
-                        triggerHaptic('selection');
-                      }}
-                      className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-                        activeTab === 'customers'
-                          ? 'bg-[#00d26a] text-black shadow-md shadow-[#00d26a]/20'
-                          : 'text-[#94a3b8] hover:text-white hover:bg-[#1a2230]'
-                      }`}
-                    >
-                      <Users className="w-4 h-4 shrink-0" />
-                      <span>Player Directory</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      aria-label="Ticket Ledger"
-                      onClick={() => {
-                        setActiveTab('reservations');
-                        triggerHaptic('selection');
-                      }}
-                      className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-                        activeTab === 'reservations'
-                          ? 'bg-[#00d26a] text-black shadow-md shadow-[#00d26a]/20'
-                          : 'text-[#94a3b8] hover:text-white hover:bg-[#1a2230]'
-                      }`}
-                    >
-                      <Ticket className="w-4 h-4 shrink-0" />
-                      <span>Ticket Ledger</span>
-                    </button>
-                  </div>
-
-                  {activeTab === 'customers' ? <CustomersView /> : <ReservationsView />}
-                </div>
-              )}
+              {activeTab === 'customers' && <CustomersView />}
               {activeTab === 'settings' && <SettingsView currentAdmin={admin} />}
             </AdminErrorBoundary>
           </div>
@@ -509,7 +460,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           >
             <div className="grid grid-cols-6 max-w-lg mx-auto items-center">
               {mobileNavItemsWithBadges.map(({ id, label, shortLabel, icon: Icon, badge }) => {
-                const isActive = (id === 'customers' && (activeTab === 'customers' || activeTab === 'reservations')) || activeTab === id;
+                const isActive = activeTab === id;
                 return (
                   <button
                     key={`mobile-${id}`}
@@ -521,31 +472,28 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   >
                     {/* Top Indicator Pill Bar (centered emerald pill matching reference image) */}
                     <div
-                      className={`w-7 h-1 rounded-full mb-1 transition-all duration-300 ${
-                        isActive
-                          ? 'bg-[#00d26a] shadow-[0_2px_8px_rgba(0,210,106,0.7)]'
-                          : 'bg-transparent'
-                      }`}
+                      className={`w-7 h-1 rounded-full mb-1 transition-all duration-300 ${isActive
+                        ? 'bg-[#00d26a] shadow-[0_2px_8px_rgba(0,210,106,0.7)]'
+                        : 'bg-transparent'
+                        }`}
                     />
 
                     {/* Icon container - clean, without circular background */}
                     <div
-                      className={`relative w-8 h-8 flex items-center justify-center transition-colors duration-200 ${
-                        isActive
-                          ? 'text-[#00d26a]'
-                          : 'text-[#64748b] group-hover:text-[#94a3b8]'
-                      }`}
+                      className={`relative w-8 h-8 flex items-center justify-center transition-colors duration-200 ${isActive
+                        ? 'text-[#00d26a]'
+                        : 'text-[#64748b] group-hover:text-[#94a3b8]'
+                        }`}
                     >
                       <Icon className="w-5 h-5" />
 
                       {/* Notification Badge on top right of icon */}
                       {badge && (
                         <span
-                          className={`absolute -top-1 -right-2 min-w-[15px] h-[15px] px-1 rounded-full text-[8.5px] font-black flex items-center justify-center border shadow-sm leading-none ${
-                            id === 'reviews'
-                              ? 'bg-amber-500 text-black border-amber-300 animate-pulse'
-                              : 'bg-[#00d26a] text-black border-[#00d26a]'
-                          }`}
+                          className={`absolute -top-1 -right-2 min-w-[15px] h-[15px] px-1 rounded-full text-[8.5px] font-black flex items-center justify-center border shadow-sm leading-none ${id === 'reviews'
+                            ? 'bg-amber-500 text-black border-amber-300 animate-pulse'
+                            : 'bg-[#00d26a] text-black border-[#00d26a]'
+                            }`}
                         >
                           {badge}
                         </span>
@@ -554,9 +502,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
                     {/* Label below icon */}
                     <span
-                      className={`text-[9.5px] tracking-tight truncate max-w-full leading-tight mt-0.5 transition-colors ${
-                        isActive ? 'font-bold text-[#00d26a]' : 'font-medium text-[#64748b]'
-                      }`}
+                      className={`text-[9.5px] tracking-tight truncate max-w-full leading-tight mt-0.5 transition-colors ${isActive ? 'font-bold text-[#00d26a]' : 'font-medium text-[#64748b]'
+                        }`}
                     >
                       {shortLabel || label}
                     </span>
