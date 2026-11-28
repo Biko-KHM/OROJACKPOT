@@ -906,8 +906,71 @@ export const api = {
     const params = new URLSearchParams();
     if (status) params.set('status', status);
     if (search !== undefined && !isNaN(search)) params.set('search', search.toString());
+    params.set('limit', '2500');
     const query = params.toString() ? `?${params.toString()}` : '';
     return request<NumberInventoryItem[]>(`/admin/lotteries/${lotteryId}/inventory${query}`);
+  },
+
+  async manualReserveNumber(
+    lotteryId: string,
+    payload: {
+      numberValue: number;
+      customerIdentifier?: string;
+      customerName?: string;
+      customerPhone?: string;
+      paymentReference?: string;
+      notes?: string;
+    },
+  ): Promise<{
+    success: boolean;
+    lotteryNumberId: string;
+    numberValue: number;
+    status: string;
+    reservationReference: string;
+    customer: {
+      id: string;
+      username: string | null;
+      telegramUserId: string;
+      firstName: string | null;
+    };
+  }> {
+    const res = await request<{
+      success: boolean;
+      lotteryNumberId: string;
+      numberValue: number;
+      status: string;
+      reservationReference: string;
+      customer: {
+        id: string;
+        username: string | null;
+        telegramUserId: string;
+        firstName: string | null;
+      };
+    }>(`/admin/lotteries/${lotteryId}/manual-reserve`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+    clearClientCache('admin_lotteries');
+    clearClientCache('admin_overview');
+    clearClientCache('open_campaigns');
+    return res;
+  },
+
+  async manualReleaseNumber(
+    lotteryId: string,
+    numberValue: number,
+  ): Promise<{ success: boolean; numberValue: number; status: string }> {
+    const res = await request<{ success: boolean; numberValue: number; status: string }>(
+      `/admin/lotteries/${lotteryId}/release-number`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ numberValue }),
+      },
+    );
+    clearClientCache('admin_lotteries');
+    clearClientCache('admin_overview');
+    clearClientCache('open_campaigns');
+    return res;
   },
 
   // 16. Payment Review (Accelerated with in-memory SWR cache for 0ms transitions)

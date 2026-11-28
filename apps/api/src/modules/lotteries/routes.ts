@@ -20,6 +20,8 @@ import {
   completeManualDraw,
   updateLotteryDrawVideo,
   updateLotteryDrawLiveUrl,
+  manualReserveNumber,
+  manualReleaseNumber,
   LotteryError,
 } from './service.js';
 import { uploadDrawVideoToTelegram, streamDrawVideo } from './videoStorage.js';
@@ -400,6 +402,83 @@ adminLotteriesRouter.post('/:id/sync-channel', async (req: Request, res: Respons
         requestId,
       },
     });
+  }
+});
+
+// POST /admin/lotteries/:id/manual-reserve
+// Allows administrator to manually book/reserve a specific number for a customer (e.g. offline bank transfer/cash)
+adminLotteriesRouter.post('/:id/manual-reserve', async (req: Request, res: Response) => {
+  const requestId = req.headers['x-request-id'] as string;
+  const lotteryId = req.params.id as string;
+  try {
+    const { numberValue, customerIdentifier, customerName, customerPhone, paymentReference, notes } = req.body;
+    if (numberValue === undefined || numberValue === null || isNaN(Number(numberValue))) {
+      res.status(400).json({
+        error: { code: 'VALIDATION_ERROR', message: 'Valid ticket number is required', requestId },
+      });
+      return;
+    }
+
+    const result = await manualReserveNumber(
+      lotteryId,
+      req.admin!.id,
+      {
+        numberValue: Number(numberValue),
+        customerIdentifier,
+        customerName,
+        customerPhone,
+        paymentReference,
+        notes,
+      },
+      requestId,
+    );
+
+    res.status(200).json(result);
+  } catch (err) {
+    if (err instanceof LotteryError) {
+      res.status(err.statusCode).json({
+        error: { code: err.code, message: err.message, requestId },
+      });
+      return;
+    }
+    const message = err instanceof Error ? err.message : 'Failed to manually reserve number';
+    logger.error({ err, requestId, lotteryId }, 'Error in manualReserveNumber route');
+    res.status(500).json({ error: { code: 'INTERNAL_ERROR', message, requestId } });
+  }
+});
+
+// POST /admin/lotteries/:id/release-number
+// Allows administrator to release a reserved or held ticket back to AVAILABLE
+adminLotteriesRouter.post('/:id/release-number', async (req: Request, res: Response) => {
+  const requestId = req.headers['x-request-id'] as string;
+  const lotteryId = req.params.id as string;
+  try {
+    const { numberValue } = req.body;
+    if (numberValue === undefined || numberValue === null || isNaN(Number(numberValue))) {
+      res.status(400).json({
+        error: { code: 'VALIDATION_ERROR', message: 'Valid ticket number is required', requestId },
+      });
+      return;
+    }
+
+    const result = await manualReleaseNumber(
+      lotteryId,
+      req.admin!.id,
+      Number(numberValue),
+      requestId,
+    );
+
+    res.status(200).json(result);
+  } catch (err) {
+    if (err instanceof LotteryError) {
+      res.status(err.statusCode).json({
+        error: { code: err.code, message: err.message, requestId },
+      });
+      return;
+    }
+    const message = err instanceof Error ? err.message : 'Failed to release number';
+    logger.error({ err, requestId, lotteryId }, 'Error in manualReleaseNumber route');
+    res.status(500).json({ error: { code: 'INTERNAL_ERROR', message, requestId } });
   }
 });
 

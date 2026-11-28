@@ -1459,7 +1459,7 @@ adminReviewRouter.get('/lotteries/:id/inventory', async (req: Request, res: Resp
   const lotteryId = req.params.id as string;
   const status = req.query.status as NumberStatus | undefined;
   const search = req.query.search ? Number(req.query.search) : undefined;
-  const limit = Math.min(Number(req.query.limit) || 100, 500);
+  const limit = Math.min(Number(req.query.limit) || 2500, 10000);
 
   const numbers = await prisma.lotteryNumber.findMany({
     where: {

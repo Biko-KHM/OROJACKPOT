@@ -988,6 +988,316 @@ export async function updateLotteryDrawLiveUrl(lotteryId: string, drawLiveUrl: s
   return serializeLottery(updated);
 }
 
+export interface ManualReserveInput {
+  numberValue: number;
+  customerIdentifier?: string; // Telegram ID or Username
+  customerName?: string;
+  customerPhone?: string;
+  paymentReference?: string;
+  notes?: string;
+}
+
+/**
+ * Manually reserves a ticket number for a customer (e.g. offline purchase, bank transfer).
+ * Atomically marks the number as RESERVED, creates a confirmed reservation, records payment,
+ * and updates campaign progress and sparse inventory caches.
+ */
+export async function manualReserveNumber(
+  lotteryId: string,
+  adminUserId: string,
+  input: ManualReserveInput,
+  requestId?: string,
+) {
+  const { numberValue, customerIdentifier, customerName, paymentReference, notes } = input;
+
+  if (typeof numberValue !== 'number' || isNaN(numberValue)) {
+    throw new LotteryError('INVALID_STATE', 'Valid ticket number is required.', 400);
+  }
+
+  // 1. Validate lottery exists and can accept bookings
+  const lottery = await prisma.lottery.findUnique({
+    where: { id: lotteryId },
+  });
+  if (!lottery) {
+    throw new LotteryError('NOT_FOUND', 'Campaign not found.', 404);
+  }
+  if (lottery.status !== LotteryStatus.OPEN && lottery.status !== LotteryStatus.PAUSED) {
+    throw new LotteryError('INVALID_STATE', `Cannot reserve numbers on a ${lottery.status} campaign.`, 400);
+  }
+
+  // 2. Validate and check number availability
+  const lotteryNumber = await prisma.lotteryNumber.findUnique({
+    where: {
+      lotteryId_numberValue: {
+        lotteryId,
+        numberValue,
+      },
+    },
+    include: {
+      claims: {
+        where: { status: 'ACTIVE' },
+      },
+    },
+  });
+
+  if (!lotteryNumber) {
+    throw new LotteryError('NOT_FOUND', `Ticket number #${numberValue} was not found in this campaign.`, 404);
+  }
+
+  if (lotteryNumber.status !== NumberStatus.AVAILABLE || lotteryNumber.claims.length > 0) {
+    throw new LotteryError(
+      'CONFLICT',
+      `Ticket #${numberValue} is currently ${lotteryNumber.status} and cannot be reserved.`,
+      409,
+    );
+  }
+
+  // 3. Resolve or auto-provision customer account
+  let customerUser = null;
+  const rawId = (customerIdentifier || '').trim();
+  const cleanUsername = rawId.replace(/^@/, '').trim();
+  const isNumericTgId = /^\d{5,15}$/.test(rawId);
+
+  if (isNumericTgId) {
+    customerUser = await prisma.user.findUnique({
+      where: { telegramUserId: BigInt(rawId) },
+    });
+  } else if (cleanUsername) {
+    customerUser = await prisma.user.findFirst({
+      where: {
+        OR: [
+          { username: cleanUsername },
+          { username: { equals: cleanUsername, mode: 'insensitive' } },
+        ],
+      },
+    });
+  }
+
+  if (!customerUser) {
+    const syntheticTgId = isNumericTgId
+      ? BigInt(rawId)
+      : BigInt(Math.floor(100000000 + Math.random() * 900000000));
+    const generatedUsername = cleanUsername || `player_${numberValue}_${Date.now().toString(36).slice(-4)}`;
+    const displayName = customerName?.trim() || cleanUsername || `Player #${numberValue}`;
+
+    customerUser = await prisma.user.create({
+      data: {
+        telegramUserId: syntheticTgId,
+        username: generatedUsername,
+        firstName: displayName,
+        role: 'CUSTOMER',
+      },
+    });
+  }
+
+  // 4. Atomically commit reservation, payment, claim, and inventory update
+  const result = await prisma.$transaction(async (tx) => {
+    // Re-verify availability within transaction lock
+    const lockedNum = await tx.lotteryNumber.findUnique({
+      where: { id: lotteryNumber.id },
+    });
+    if (!lockedNum || lockedNum.status !== NumberStatus.AVAILABLE) {
+      throw new LotteryError('CONFLICT', `Ticket #${numberValue} was reserved by another transaction.`, 409);
+    }
+
+    const now = new Date();
+    const publicRef = `RES-MANUAL-${Math.floor(100000 + Math.random() * 900000)}`;
+    const farFutureExpiry = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000);
+
+    // Create confirmed reservation
+    const reservation = await tx.reservation.create({
+      data: {
+        lotteryId: lottery.id,
+        userId: customerUser.id,
+        publicReference: publicRef,
+        ticketCount: 1,
+        currency: lottery.currency,
+        unitPriceMinor: lottery.ticketPriceMinor,
+        totalAmountMinor: lottery.ticketPriceMinor,
+        status: ReservationStatus.CONFIRMED,
+        holdExpiresAt: farFutureExpiry,
+        reviewedAt: now,
+        reviewedBy: adminUserId,
+      },
+    });
+
+    // Create reservation item snapshot
+    await tx.reservationItem.create({
+      data: {
+        reservationId: reservation.id,
+        lotteryId: lottery.id,
+        lotteryNumberId: lockedNum.id,
+        numberValueSnapshot: lockedNum.numberValue,
+        unitPriceMinor: lottery.ticketPriceMinor,
+      },
+    });
+
+    // Create active claim
+    await tx.numberClaim.create({
+      data: {
+        lotteryNumberId: lockedNum.id,
+        reservationId: reservation.id,
+        status: 'ACTIVE',
+        expiresAt: farFutureExpiry,
+      },
+    });
+
+    // Mark number as RESERVED
+    const updatedNumber = await tx.lotteryNumber.update({
+      where: { id: lockedNum.id },
+      data: { status: NumberStatus.RESERVED },
+    });
+
+    // Create approved payment submission record
+    const submission = await tx.paymentSubmission.create({
+      data: {
+        reservationId: reservation.id,
+        submittedBy: customerUser.id,
+        storageKey: 'manual-admin-receipt',
+        originalFilename: 'manual_receipt.txt',
+        mimeType: 'text/plain',
+        fileSizeBytes: BigInt(0),
+        fileSha256: `manual-admin-${reservation.id}`,
+        paymentReference: paymentReference?.trim() || `MANUAL-${publicRef}`,
+        claimedAmountMinor: lottery.ticketPriceMinor,
+        status: 'APPROVED',
+      },
+    });
+
+    // Record review approval
+    await tx.paymentReview.create({
+      data: {
+        paymentSubmissionId: submission.id,
+        reviewerId: adminUserId,
+        decision: 'APPROVED',
+        reason: notes?.trim() || 'Manual ticket reservation confirmed by administrator',
+        comparedWithBankRecord: true,
+      },
+    });
+
+    // Write audit log
+    await tx.auditLog.create({
+      data: {
+        actorUserId: adminUserId,
+        action: 'MANUAL_TICKET_RESERVED',
+        entityType: 'LotteryNumber',
+        entityId: lockedNum.id,
+        requestId: requestId || null,
+        details: {
+          lotteryId,
+          numberValue,
+          reservationId: reservation.id,
+          publicReference: publicRef,
+          customerUsername: customerUser.username,
+          customerTelegramId: customerUser.telegramUserId.toString(),
+          paymentReference: paymentReference?.trim() || 'MANUAL',
+        },
+      },
+    });
+
+    // Write outbox progress update
+    await tx.outboxEvent.create({
+      data: {
+        eventType: 'PROGRESS_UPDATE',
+        payload: {
+          lotteryId,
+          reservationId: reservation.id,
+          action: 'CONFIRMED',
+          ticketCount: 1,
+          timestamp: now.toISOString(),
+        },
+      },
+    });
+
+    return {
+      reservation,
+      updatedNumber,
+      customerUser,
+    };
+  });
+
+  // 5. Invalidate caches so progress and summaries update instantly across system
+  clearSummaryCache(lotteryId);
+  await cache.del(CACHE_KEYS.LOTTERY(lotteryId));
+  await cache.del(CACHE_KEYS.OPEN_LOTTERIES);
+  await cache.del(CACHE_KEYS.ALL_LOTTERIES);
+
+  return {
+    success: true,
+    lotteryNumberId: result.updatedNumber.id,
+    numberValue: result.updatedNumber.numberValue,
+    status: result.updatedNumber.status,
+    reservationReference: result.reservation.publicReference,
+    customer: {
+      id: result.customerUser.id,
+      username: result.customerUser.username,
+      telegramUserId: result.customerUser.telegramUserId.toString(),
+      firstName: result.customerUser.firstName,
+    },
+  };
+}
+
+/**
+ * Releases a reserved or held number back to AVAILABLE status if needed.
+ */
+export async function manualReleaseNumber(
+  lotteryId: string,
+  adminUserId: string,
+  numberValue: number,
+  requestId?: string,
+) {
+  const lottery = await prisma.lottery.findUnique({ where: { id: lotteryId } });
+  if (!lottery) throw new LotteryError('NOT_FOUND', 'Campaign not found.', 404);
+
+  const lotteryNumber = await prisma.lotteryNumber.findUnique({
+    where: { lotteryId_numberValue: { lotteryId, numberValue } },
+    include: { claims: { where: { status: 'ACTIVE' } } },
+  });
+  if (!lotteryNumber) throw new LotteryError('NOT_FOUND', `Ticket #${numberValue} not found.`, 404);
+
+  const now = new Date();
+
+  await prisma.$transaction(async (tx) => {
+    // Release active claims
+    for (const claim of lotteryNumber.claims) {
+      await tx.numberClaim.update({
+        where: { id: claim.id },
+        data: { status: 'RELEASED', releasedAt: now },
+      });
+      // Cancel reservation if it was a single ticket reservation
+      await tx.reservation.updateMany({
+        where: { id: claim.reservationId, ticketCount: 1 },
+        data: { status: ReservationStatus.CANCELLED },
+      });
+    }
+
+    // Set number back to AVAILABLE
+    await tx.lotteryNumber.update({
+      where: { id: lotteryNumber.id },
+      data: { status: NumberStatus.AVAILABLE },
+    });
+
+    // Write audit log
+    await tx.auditLog.create({
+      data: {
+        actorUserId: adminUserId,
+        action: 'MANUAL_NUMBER_RELEASED',
+        entityType: 'LotteryNumber',
+        entityId: lotteryNumber.id,
+        requestId: requestId || null,
+        details: { lotteryId, numberValue },
+      },
+    });
+  });
+
+  clearSummaryCache(lotteryId);
+  await cache.del(CACHE_KEYS.LOTTERY(lotteryId));
+  await cache.del(CACHE_KEYS.OPEN_LOTTERIES);
+  await cache.del(CACHE_KEYS.ALL_LOTTERIES);
+
+  return { success: true, numberValue, status: NumberStatus.AVAILABLE };
+}
+
 // Helper: Serializes BigInt values into strings for JSON response
 function serializeLottery(lottery: {
   id: string;
